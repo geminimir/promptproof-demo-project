@@ -1,0 +1,47 @@
+schema_version: pp.v1
+fixtures: fixtures/support-replies/outputs.jsonl
+selectors:
+  text: output.text
+  json: output.json
+  tools: output.tool_calls
+  locale: locale
+
+checks:
+  - id: schema
+    type: json_schema
+    target: json
+    schema:
+      type: object
+      required: [status, items, confidence]
+      properties:
+        status: 
+          type: string
+          enum: [success, error]
+        items: 
+          type: array
+        confidence: 
+          type: number
+          minimum: 0
+          maximum: 1
+  - id: no_pii
+    type: regex_forbidden
+    target: text
+    patterns:
+      - "[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}"
+      - "\\b\\+?\\d[\\d\\s().-]{7,}\\b"
+  - id: disclaimer_en
+    type: regex_required
+    target: text
+    patterns: 
+      - "We cannot share personal contact information\\."
+  - id: disclaimer_fr
+    type: regex_required
+    target: text
+    patterns: 
+      - "Nous ne pouvons pas partager des coordonnées personnelles\\."
+
+budgets:
+  cost_usd_per_run_max: 0.30
+  latency_ms_p95_max: 1800
+  
+mode: warn
