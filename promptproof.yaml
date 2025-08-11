@@ -40,8 +40,24 @@ checks:
     patterns: 
       - "Nous ne pouvons pas partager des coordonnées personnelles\\."
 
+  # Extra checks using new capabilities
+  - id: response_contains_disclaimer
+    type: string_contains
+    target: text
+    expected: "We cannot"
+    ignore_case: true
+
+  - id: citations_set_allowed
+    type: set_equality
+    target: json.citations
+    expected: ["/data/faq.md", "/data/warranty.md", "/data/refund-policy.md"]
+    mode: subset
+
 budgets:
   cost_usd_per_run_max: 0.30
+  cost_usd_total_max: 1.50
   latency_ms_p95_max: 1800
+  # Optional regression-based budget checks (used when baseline exists)
+  cost_usd_total_pct_increase_max: 20
   
 mode: warn

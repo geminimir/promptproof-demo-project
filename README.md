@@ -43,6 +43,7 @@ This demo showcases the complete PromptProof workflow using the official npm pac
 - **`promptproof-cli@beta`**: Validates fixtures against contracts
 - **NPM scripts**: `npm run test:promptproof` for easy validation
 - **Multiple formats**: Console, HTML, JSON reports
+- **New**: `--regress`, `--seed`, `--runs` flags; `snapshot` command for baselines
 
 ### **GitHub Action** ✅
 Add `.github/workflows/promptproof.yml`:
@@ -62,6 +63,10 @@ jobs:
           config: promptproof.yaml
           format: html
           mode: warn
+      - name: Create snapshot on success
+        if: github.ref == 'refs/heads/main' && success()
+        run: |
+          npx promptproof snapshot promptproof.yaml --promote
 ```
 
 ### **Environment Variables**
@@ -109,6 +114,12 @@ npx promptproof eval -c promptproof.yaml
 
 # Generate HTML report
 npm run test:promptproof:html
+
+# Compare against baseline (if snapshot exists)
+npx promptproof eval -c promptproof.yaml --regress
+
+# Create a baseline snapshot after green runs
+npx promptproof snapshot promptproof.yaml --promote
 ```
 
 ## Demo Value

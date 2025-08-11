@@ -19,6 +19,10 @@ jobs:
           config: promptproof.yaml
           format: html
           mode: warn
+      - name: Create snapshot on success
+        if: github.ref == 'refs/heads/main' && success()
+        run: |
+          npx promptproof snapshot promptproof.yaml --promote
       
       - name: Upload report
         if: always()
