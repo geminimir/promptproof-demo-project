@@ -60,4 +60,4 @@ budgets:
   # Optional regression-based budget checks (used when baseline exists)
   cost_usd_total_pct_increase_max: 20
   
-mode: warn
+mode: gate
