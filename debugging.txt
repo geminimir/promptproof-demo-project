@@ -82,9 +82,10 @@ Environment details
 ##[debug]Loading inputs
 ##[debug]Loading env
 Run echo "::group::Checking PromptProof availability"
-##[debug]/usr/bin/bash --noprofile --norc -e -o pipefail /home/runner/work/_temp/efe5a0c0-0fca-487a-a0c0-79b6bf1e5cd7.sh
+##[debug]/usr/bin/bash --noprofile --norc -e -o pipefail /home/runner/work/_temp/a3cf8a6e-0d47-4c3f-a7d7-b26aa3dc4609.sh
 ::group::Checking PromptProof availability
 Checking PromptProof availability
+##[debug]CLI_PACKAGE='promptproof-cli@beta'
 ##[debug]Finished: run
 ##[debug]Evaluating condition for step: 'run'
 ##[debug]Evaluating: success()
@@ -169,6 +170,1285 @@ Checking PromptProof availability
 ##[debug]      awk -v val="{14}" ''BEGIN{{added=0}} {{print $0; if ($0 ~ /^budgets:\s*$/ && added==0){{print "  cost_usd_total_max: " val; added=1}}}}'' "$TMP_CONFIG" > "$TMP_CONFIG.tmp" && mv "$TMP_CONFIG.tmp" "$TMP_CONFIG"
 ##[debug]    fi
 ##[debug]  fi
+##[debug]  # Force mode if requested (replace existing or append)
+##[debug]  if [ -n "$MODE_INPUT" ]; then
+##[debug]    if grep -Eq ''^\s*mode:\s*'' "$TMP_CONFIG"; then
+##[debug]      sed -i.bak -E "s/^\s*mode:\s*.*/mode: $MODE_INPUT/" "$TMP_CONFIG"
+##[debug]    else
+##[debug]      printf ''\nmode: %s\n'' "$MODE_INPUT" >> "$TMP_CONFIG"
+##[debug]    fi
+##[debug]  fi
+##[debug]  EFFECTIVE_CONFIG="$TMP_CONFIG"
+##[debug]fi
+##[debug]
+##[debug]# Select CLI package (default to beta if not set by previous step)
+##[debug]CLI_PACKAGE="${{CLI_PACKAGE:-promptproof-cli@beta}}"
+##[debug]
+##[debug]# Prepare command (force JSON alongside chosen format)
+##[debug]CMD="npx -y -p $CLI_PACKAGE promptproof eval --config $EFFECTIVE_CONFIG --format {15} --out $ARTIFACT_NAME"
+##[debug]
+##[debug]# Add mode flag if specified to warn/report-only
+##[debug]if [ "$MODE_INPUT" = "warn" ]; then CMD="$CMD --warn"; fi
+##[debug]# Add regress flag if specified
+##[debug]if [ "{16}" = "true" ]; then
+##[debug]  CMD="$CMD --regress"
+##[debug]fi
+##[debug]# If baseline-ref provided, imply regress
+##[debug]if [ -n "{17}" ]; then
+##[debug]  CMD="$CMD --regress"
+##[debug]fi
+##[debug]# Add seed if specified
+##[debug]if [ -n "{18}" ]; then
+##[debug]  CMD="$CMD --seed {19}"
+##[debug]fi
+##[debug]# Add runs if specified
+##[debug]if [ -n "{20}" ]; then
+##[debug]  CMD="$CMD --runs {21}"
+##[debug]fi
+##[debug]
+##[debug]# Run evaluation and capture output
+##[debug]set +e
+##[debug]OUTPUT=$($CMD 2>&1)
+##[debug]EXIT_CODE=$?
+##[debug]set -e
+##[debug]
+##[debug]echo "$OUTPUT"
+##[debug]
+##[debug]# Parse output for metrics (prefer JSON report if present)
+##[debug]JSON_REPORT="$ARTIFACT_NAME.json"
+##[debug]if [ -f "$JSON_REPORT" ]; then
+##[debug]  VIOLATIONS=$(node -e "console.log(require(''./$JSON_REPORT'').violations?.length ?? 0)")
+##[debug]  PASSED=$(node -e "console.log(require(''./$JSON_REPORT'').passed ?? 0)")
+##[debug]  FAILED=$(node -e "console.log(require(''./$JSON_REPORT'').failed ?? 0)")
+##[debug]  TOTAL_COST=$(node -e "console.log((require(''./$JSON_REPORT'').budgets?.cost_usd_total ?? 0).toFixed(4))")
+##[debug]  REGRESSIONS=$(node -e "const r=require(''./$JSON_REPORT'').regression; console.log(r && r.new_failures ? r.new_failures.length : 0)")
+##[debug]
+##[debug]  # If HTML is missing (older CLI), synthesize a simple HTML report from JSON
+##[debug]  if [ ! -f "$ARTIFACT_NAME.html" ] && [ "{22}" = "html" ]; then
+##[debug]    node -e "const fs=require(''fs'');const r=JSON.parse(fs.readFileSync(''$JSON_REPORT'',''utf8''));function esc(s){{return String(s).replace(/&/g,''&amp;'').replace(/</g,''&lt;'').replace(/>/g,''&gt;'')}}const rows=(r.violations||[]).slice(0,200).map(v=>`<tr><td>${{esc(v.checkId)}}</td><td>${{esc(v.recordId)}}</td><td>${{esc(v.message||'''')}}</td></tr>`).join('''');const html=`<!doctype html><meta charset=''utf-8''><title>PromptProof Report</title><h1>PromptProof Report</h1><p><b>Total:</b> ${{r.total||0}} · <b>Passed:</b> ${{r.passed||0}} · <b>Failed:</b> ${{r.failed||0}} · <b>Total Cost:</b> $${{(r.budgets&&r.budgets.cost_usd_total||0).toFixed(4)}}</p><h2>Violations (${{(r.violations||[]).length}})</h2><table border=''1'' cellspacing=''0'' cellpadding=''6''><tr><th>Check</th><th>Record</th><th>Message</th></tr>${{rows}}</table>`;fs.writeFileSync(''$ARTIFACT_NAME.html'',html);"
+##[debug]  fi
+##[debug]else
+##[debug]  # If JSON wasn''t produced (older CLI), run a second pass to emit JSON deterministically
+##[debug]  echo "JSON report missing after first run; invoking JSON reporter"
+##[debug]  set +e
+##[debug]  OUTPUT_JSON=$(npx -y -p "$CLI_PACKAGE" promptproof eval --config "$EFFECTIVE_CONFIG" --format json --out "$ARTIFACT_NAME" 2>&1)
+##[debug]  EXIT_CODE_JSON=$?
+##[debug]  set -e
+##[debug]  echo "$OUTPUT_JSON"
+##[debug]  
+##[debug]  if [ -f "$JSON_REPORT" ]; then
+##[debug]    VIOLATIONS=$(node -e "console.log(require(''./$JSON_REPORT'').violations?.length ?? 0)")
+##[debug]    PASSED=$(node -e "console.log(require(''./$JSON_REPORT'').passed ?? 0)")
+##[debug]    FAILED=$(node -e "console.log(require(''./$JSON_REPORT'').failed ?? 0)")
+##[debug]    TOTAL_COST=$(node -e "console.log((require(''./$JSON_REPORT'').budgets?.cost_usd_total ?? 0).toFixed(4))")
+##[debug]    REGRESSIONS=$(node -e "const r=require(''./$JSON_REPORT'').regression; console.log(r && r.new_failures ? r.new_failures.length : 0)")
+##[debug]    # Synthesize HTML from JSON if requested format is html and file missing
+##[debug]    if [ ! -f "$ARTIFACT_NAME.html" ] && [ "{23}" = "html" ]; then
+##[debug]      node -e "const fs=require(''fs'');const r=JSON.parse(fs.readFileSync(''$JSON_REPORT'',''utf8''));function esc(s){{return String(s).replace(/&/g,''&amp;'').replace(/</g,''&lt;'').replace(/>/g,''&gt;'')}}const rows=(r.violations||[]).slice(0,200).map(v=>`<tr><td>${{esc(v.checkId)}}</td><td>${{esc(v.recordId)}}</td><td>${{esc(v.message||'''')}}</td></tr>`).join('''');const html=`<!doctype html><meta charset=''utf-8''><title>PromptProof Report</title><h1>PromptProof Report</h1><p><b>Total:</b> ${{r.total||0}} · <b>Passed:</b> ${{r.passed||0}} · <b>Failed:</b> ${{r.failed||0}} · <b>Total Cost:</b> $${{(r.budgets&&r.budgets.cost_usd_total||0).toFixed(4)}}</p><h2>Violations (${{(r.violations||[]).length}})</h2><table border=''1'' cellspacing=''0'' cellpadding=''6''><tr><th>Check</th><th>Record</th><th>Message</th></tr>${{rows}}</table>`;fs.writeFileSync(''$ARTIFACT_NAME.html'',html);"
+##[debug]    fi
+##[debug]  else
+##[debug]  VIOLATIONS=$(echo "$OUTPUT" | grep -oP ''\\d+ violations found'' | grep -oP ''\\d+'' || echo "0")
+##[debug]  PASSED=$(echo "$OUTPUT" | grep -oP ''Passed: \\d+'' | grep -oP ''\\d+'' || echo "0")
+##[debug]  FAILED=$(echo "$OUTPUT" | grep -oP ''Failed: \\d+'' | grep -oP ''\\d+'' || echo "0")
+##[debug]  TOTAL_COST="0.0000"
+##[debug]  REGRESSIONS="0"
+##[debug]
+##[debug]  # Fallback: emit simple HTML and JSON if reporter files are missing
+##[debug]  echo "No JSON report found; creating fallback report files"
+##[debug]  {{
+##[debug]    echo "<html><head><meta charset=\"utf-8\"><title>PromptProof Report</title></head><body>"
+##[debug]    echo "<h1>PromptProof Report (fallback)</h1>"
+##[debug]    echo "<p><strong>Note:</strong> Using console output because JSON/HTML report was not generated by the CLI.</p>"
+##[debug]    echo "<pre>"
+##[debug]    echo "$OUTPUT" | sed ''s/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g''
+##[debug]    echo "</pre>"
+##[debug]    echo "</body></html>"
+##[debug]  }} > "$ARTIFACT_NAME.html"
+##[debug]
+##[debug]  # Write minimal JSON next to HTML
+##[debug]  echo ''{{"total":0,"passed":0,"failed":0,"violations":[],"budgets":{{"cost_usd_total":0,"latency_ms_p95":0,"latency_ms_p99":0}},"mode":"warn","exitCode":0}}'' > "$ARTIFACT_NAME.json"
+##[debug]  fi
+##[debug]fi
+##[debug]
+##[debug]# Set outputs
+##[debug]echo "violations=$VIOLATIONS" >> $GITHUB_OUTPUT
+##[debug]echo "passed=$PASSED" >> $GITHUB_OUTPUT
+##[debug]echo "failed=$FAILED" >> $GITHUB_OUTPUT
+##[debug]# Map format to file extension
+##[debug]EXT="txt"
+##[debug]case "{24}" in
+##[debug]  html) EXT="html";;
+##[debug]  junit) EXT="xml";;
+##[debug]  json) EXT="json";;
+##[debug]  console) EXT="txt";;
+##[debug]esac
+##[debug]echo "report-path=$ARTIFACT_NAME.$EXT" >> $GITHUB_OUTPUT
+##[debug]echo "exit-code=$EXIT_CODE" >> $GITHUB_OUTPUT
+##[debug]echo "total-cost=$TOTAL_COST" >> $GITHUB_OUTPUT
+##[debug]echo "failed-tests=$FAILED" >> $GITHUB_OUTPUT
+##[debug]echo "regressions=$REGRESSIONS" >> $GITHUB_OUTPUT
+##[debug]
+##[debug]# Create summary
+##[debug]echo "## PromptProof Evaluation Results" >> $GITHUB_STEP_SUMMARY
+##[debug]echo "" >> $GITHUB_STEP_SUMMARY
+##[debug]
+##[debug]if [ "$VIOLATIONS" = "0" ]; then
+##[debug]  echo "✅ **All checks passed!**" >> $GITHUB_STEP_SUMMARY
+##[debug]else
+##[debug]  echo "❌ **$VIOLATIONS violations found**" >> $GITHUB_STEP_SUMMARY
+##[debug]fi
+##[debug]
+##[debug]echo "" >> $GITHUB_STEP_SUMMARY
+##[debug]echo "- Fixtures evaluated: $((PASSED + FAILED))" >> $GITHUB_STEP_SUMMARY
+##[debug]echo "- Passed: $PASSED" >> $GITHUB_STEP_SUMMARY
+##[debug]echo "- Failed: $FAILED" >> $GITHUB_STEP_SUMMARY
+##[debug]echo "- Total Cost: \$$TOTAL_COST" >> $GITHUB_STEP_SUMMARY
+##[debug]if [ "$REGRESSIONS" != "0" ]; then
+##[debug]  echo "- Regressions: $REGRESSIONS" >> $GITHUB_STEP_SUMMARY
+##[debug]fi
+##[debug]
+##[debug]echo "::endgroup::"
+##[debug]
+##[debug]# Exit with original code
+##[debug]exit $EXIT_CODE
+##[debug]', inputs.config, inputs.report-artifact, inputs.baseline-ref, inputs.baseline-ref, inputs.baseline-ref, inputs.baseline-ref, inputs.baseline-ref, inputs.baseline-ref, inputs.baseline-ref, inputs.mode, inputs.max-run-cost, inputs.config, inputs.max-run-cost, inputs.max-run-cost, inputs.max-run-cost, inputs.format, inputs.regress, inputs.baseline-ref, inputs.seed, inputs.seed, inputs.runs, inputs.runs, inputs.format, inputs.format, inputs.format)
+##[debug]Evaluating format:
+##[debug]..Evaluating String:
+##[debug]..=> 'echo "::group::Running PromptProof evaluation"
+##[debug]
+##[debug]# Determine effective config path (may be rewritten below)
+##[debug]EFFECTIVE_CONFIG="{0}"
+##[debug]
+##[debug]# Prepare artifact base name and output path
+##[debug]ARTIFACT_NAME="{1}"
+##[debug]if [ -z "$ARTIFACT_NAME" ]; then
+##[debug]  ARTIFACT_NAME="promptproof-report"
+##[debug]fi
+##[debug]
+##[debug]# Handle baseline-ref: fetch baseline snapshot files from the given ref
+##[debug]if [ -n "{2}" ]; then
+##[debug]  echo "Fetching baseline snapshot from ref: {3}"
+##[debug]  mkdir -p .promptproof/baselines
+##[debug]  # Find all last_green.json files at the ref
+##[debug]  SUITE_FILES=$(git ls-tree -r --name-only "{4}" .promptproof/baselines 2>/dev/null | grep ''last_green.json'' || true)
+##[debug]  if [ -n "$SUITE_FILES" ]; then
+##[debug]    while read -r FILE; do
+##[debug]      [ -z "$FILE" ] && continue
+##[debug]      SUITE=$(echo "$FILE" | awk -F/ ''{{print $3}}'')
+##[debug]      mkdir -p ".promptproof/baselines/$SUITE"
+##[debug]      git show "{5}:$FILE" > ".promptproof/baselines/$SUITE/last_green.json" || true
+##[debug]      BASELINE_JSON=".promptproof/baselines/$SUITE/last_green.json"
+##[debug]      if [ -f "$BASELINE_JSON" ]; then
+##[debug]        MANIFEST_REL=$(node -e "try{{const b=require(''./$BASELINE_JSON'');console.log(b.path||'''')}}catch(e){{console.log('''')}}")
+##[debug]        TAG=$(node -e "try{{const b=require(''./$BASELINE_JSON'');console.log(b.tag||'''')}}catch(e){{console.log('''')}}")
+##[debug]        if [ -n "$MANIFEST_REL" ]; then
+##[debug]          mkdir -p ".promptproof/baselines/$SUITE/$MANIFEST_REL"
+##[debug]          git show "{6}:.promptproof/baselines/$SUITE/$MANIFEST_REL/manifest.json" > ".promptproof/baselines/$SUITE/$MANIFEST_REL/manifest.json" 2>/dev/null || true
+##[debug]        fi
+##[debug]        if [ -n "$TAG" ]; then
+##[debug]          mkdir -p ".promptproof/snapshots/$SUITE/$TAG"
+##[debug]          git show "{7}:.promptproof/snapshots/$SUITE/$TAG/manifest.json" > ".promptproof/snapshots/$SUITE/$TAG/manifest.json" 2>/dev/null || true
+##[debug]        fi
+##[debug]      fi
+##[debug]    done <<< "$SUITE_FILES"
+##[debug]  else
+##[debug]    echo "No baseline snapshots found at ref {8}" || true
+##[debug]  fi
+##[debug]fi
+##[debug]
+##[debug]# Possibly rewrite config to enforce mode and/or max-run-cost
+##[debug]NEEDS_REWRITE="0"
+##[debug]TMP_CONFIG="promptproof.effective.yaml"
+##[debug]
+##[debug]# Normalize mode synonyms and decide if we need to force mode in config
+##[debug]MODE_INPUT="{9}"
+##[debug]if [ "$MODE_INPUT" = "report-only" ]; then MODE_INPUT="warn"; fi
+##[debug]if [ "$MODE_INPUT" = "gate" ]; then MODE_INPUT="fail"; fi
+##[debug]
+##[debug]if [ -n "$MODE_INPUT" ]; then
+##[debug]  NEEDS_REWRITE="1"
+##[debug]fi
+##[debug]
+##[debug]if [ -n "{10}" ]; then
+##[debug]  NEEDS_REWRITE="1"
+##[debug]fi
+##[debug]
+##[debug]if [ "$NEEDS_REWRITE" = "1" ]; then
+##[debug]  echo "Rewriting policy config for requested overrides"
+##[debug]  # Start from original
+##[debug]  cp "{11}" "$TMP_CONFIG"
+##[debug]  # Ensure budgets block exists if we need to write cost gate
+##[debug]  if [ -n "{12}" ]; then
+##[debug]    if ! grep -Eq ''^\s*budgets:\s*$'' "$TMP_CONFIG"; then
+##[debug]      printf ''\n'' >> "$TMP_CONFIG"
+##[debug]      echo ''budgets:'' >> "$TMP_CONFIG"
+##[debug]    fi
+##[debug]    # If the key exists, replace it; otherwise, insert under budgets:
+##[debug]    if grep -Eq ''^\s*cost_usd_total_max:\s*'' "$TMP_CONFIG"; then
+##[debug]      sed -i.bak -E "s/^\s*cost_usd_total_max:\s*.*/  cost_usd_total_max: {13}/" "$TMP_CONFIG"
+##[debug]    else
+##[debug]      awk -v val="{14}" ''BEGIN{{added=0}} {{print $0; if ($0 ~ /^budgets:\s*$/ && added==0){{print "  cost_usd_total_max: " val; added=1}}}}'' "$TMP_CONFIG" > "$TMP_CONFIG.tmp" && mv "$TMP_CONFIG.tmp" "$TMP_CONFIG"
+##[debug]    fi
+##[debug]  fi
+##[debug]  # Force mode if requested (replace existing or append)
+##[debug]  if [ -n "$MODE_INPUT" ]; then
+##[debug]    if grep -Eq ''^\s*mode:\s*'' "$TMP_CONFIG"; then
+##[debug]      sed -i.bak -E "s/^\s*mode:\s*.*/mode: $MODE_INPUT/" "$TMP_CONFIG"
+##[debug]    else
+##[debug]      printf ''\nmode: %s\n'' "$MODE_INPUT" >> "$TMP_CONFIG"
+##[debug]    fi
+##[debug]  fi
+##[debug]  EFFECTIVE_CONFIG="$TMP_CONFIG"
+##[debug]fi
+##[debug]
+##[debug]# Select CLI package (default to beta if not set by previous step)
+##[debug]CLI_PACKAGE="${{CLI_PACKAGE:-promptproof-cli@beta}}"
+##[debug]
+##[debug]# Prepare command (force JSON alongside chosen format)
+##[debug]CMD="npx -y -p $CLI_PACKAGE promptproof eval --config $EFFECTIVE_CONFIG --format {15} --out $ARTIFACT_NAME"
+##[debug]
+##[debug]# Add mode flag if specified to warn/report-only
+##[debug]if [ "$MODE_INPUT" = "warn" ]; then CMD="$CMD --warn"; fi
+##[debug]# Add regress flag if specified
+##[debug]if [ "{16}" = "true" ]; then
+##[debug]  CMD="$CMD --regress"
+##[debug]fi
+##[debug]# If baseline-ref provided, imply regress
+##[debug]if [ -n "{17}" ]; then
+##[debug]  CMD="$CMD --regress"
+##[debug]fi
+##[debug]# Add seed if specified
+##[debug]if [ -n "{18}" ]; then
+##[debug]  CMD="$CMD --seed {19}"
+##[debug]fi
+##[debug]# Add runs if specified
+##[debug]if [ -n "{20}" ]; then
+##[debug]  CMD="$CMD --runs {21}"
+##[debug]fi
+##[debug]
+##[debug]# Run evaluation and capture output
+##[debug]set +e
+##[debug]OUTPUT=$($CMD 2>&1)
+##[debug]EXIT_CODE=$?
+##[debug]set -e
+##[debug]
+##[debug]echo "$OUTPUT"
+##[debug]
+##[debug]# Parse output for metrics (prefer JSON report if present)
+##[debug]JSON_REPORT="$ARTIFACT_NAME.json"
+##[debug]if [ -f "$JSON_REPORT" ]; then
+##[debug]  VIOLATIONS=$(node -e "console.log(require(''./$JSON_REPORT'').violations?.length ?? 0)")
+##[debug]  PASSED=$(node -e "console.log(require(''./$JSON_REPORT'').passed ?? 0)")
+##[debug]  FAILED=$(node -e "console.log(require(''./$JSON_REPORT'').failed ?? 0)")
+##[debug]  TOTAL_COST=$(node -e "console.log((require(''./$JSON_REPORT'').budgets?.cost_usd_total ?? 0).toFixed(4))")
+##[debug]  REGRESSIONS=$(node -e "const r=require(''./$JSON_REPORT'').regression; console.log(r && r.new_failures ? r.new_failures.length : 0)")
+##[debug]
+##[debug]  # If HTML is missing (older CLI), synthesize a simple HTML report from JSON
+##[debug]  if [ ! -f "$ARTIFACT_NAME.html" ] && [ "{22}" = "html" ]; then
+##[debug]    node -e "const fs=require(''fs'');const r=JSON.parse(fs.readFileSync(''$JSON_REPORT'',''utf8''));function esc(s){{return String(s).replace(/&/g,''&amp;'').replace(/</g,''&lt;'').replace(/>/g,''&gt;'')}}const rows=(r.violations||[]).slice(0,200).map(v=>`<tr><td>${{esc(v.checkId)}}</td><td>${{esc(v.recordId)}}</td><td>${{esc(v.message||'''')}}</td></tr>`).join('''');const html=`<!doctype html><meta charset=''utf-8''><title>PromptProof Report</title><h1>PromptProof Report</h1><p><b>Total:</b> ${{r.total||0}} · <b>Passed:</b> ${{r.passed||0}} · <b>Failed:</b> ${{r.failed||0}} · <b>Total Cost:</b> $${{(r.budgets&&r.budgets.cost_usd_total||0).toFixed(4)}}</p><h2>Violations (${{(r.violations||[]).length}})</h2><table border=''1'' cellspacing=''0'' cellpadding=''6''><tr><th>Check</th><th>Record</th><th>Message</th></tr>${{rows}}</table>`;fs.writeFileSync(''$ARTIFACT_NAME.html'',html);"
+##[debug]  fi
+##[debug]else
+##[debug]  # If JSON wasn''t produced (older CLI), run a second pass to emit JSON deterministically
+##[debug]  echo "JSON report missing after first run; invoking JSON reporter"
+##[debug]  set +e
+##[debug]  OUTPUT_JSON=$(npx -y -p "$CLI_PACKAGE" promptproof eval --config "$EFFECTIVE_CONFIG" --format json --out "$ARTIFACT_NAME" 2>&1)
+##[debug]  EXIT_CODE_JSON=$?
+##[debug]  set -e
+##[debug]  echo "$OUTPUT_JSON"
+##[debug]  
+##[debug]  if [ -f "$JSON_REPORT" ]; then
+##[debug]    VIOLATIONS=$(node -e "console.log(require(''./$JSON_REPORT'').violations?.length ?? 0)")
+##[debug]    PASSED=$(node -e "console.log(require(''./$JSON_REPORT'').passed ?? 0)")
+##[debug]    FAILED=$(node -e "console.log(require(''./$JSON_REPORT'').failed ?? 0)")
+##[debug]    TOTAL_COST=$(node -e "console.log((require(''./$JSON_REPORT'').budgets?.cost_usd_total ?? 0).toFixed(4))")
+##[debug]    REGRESSIONS=$(node -e "const r=require(''./$JSON_REPORT'').regression; console.log(r && r.new_failures ? r.new_failures.length : 0)")
+##[debug]    # Synthesize HTML from JSON if requested format is html and file missing
+##[debug]    if [ ! -f "$ARTIFACT_NAME.html" ] && [ "{23}" = "html" ]; then
+##[debug]      node -e "const fs=require(''fs'');const r=JSON.parse(fs.readFileSync(''$JSON_REPORT'',''utf8''));function esc(s){{return String(s).replace(/&/g,''&amp;'').replace(/</g,''&lt;'').replace(/>/g,''&gt;'')}}const rows=(r.violations||[]).slice(0,200).map(v=>`<tr><td>${{esc(v.checkId)}}</td><td>${{esc(v.recordId)}}</td><td>${{esc(v.message||'''')}}</td></tr>`).join('''');const html=`<!doctype html><meta charset=''utf-8''><title>PromptProof Report</title><h1>PromptProof Report</h1><p><b>Total:</b> ${{r.total||0}} · <b>Passed:</b> ${{r.passed||0}} · <b>Failed:</b> ${{r.failed||0}} · <b>Total Cost:</b> $${{(r.budgets&&r.budgets.cost_usd_total||0).toFixed(4)}}</p><h2>Violations (${{(r.violations||[]).length}})</h2><table border=''1'' cellspacing=''0'' cellpadding=''6''><tr><th>Check</th><th>Record</th><th>Message</th></tr>${{rows}}</table>`;fs.writeFileSync(''$ARTIFACT_NAME.html'',html);"
+##[debug]    fi
+##[debug]  else
+##[debug]  VIOLATIONS=$(echo "$OUTPUT" | grep -oP ''\\d+ violations found'' | grep -oP ''\\d+'' || echo "0")
+##[debug]  PASSED=$(echo "$OUTPUT" | grep -oP ''Passed: \\d+'' | grep -oP ''\\d+'' || echo "0")
+##[debug]  FAILED=$(echo "$OUTPUT" | grep -oP ''Failed: \\d+'' | grep -oP ''\\d+'' || echo "0")
+##[debug]  TOTAL_COST="0.0000"
+##[debug]  REGRESSIONS="0"
+##[debug]
+##[debug]  # Fallback: emit simple HTML and JSON if reporter files are missing
+##[debug]  echo "No JSON report found; creating fallback report files"
+##[debug]  {{
+##[debug]    echo "<html><head><meta charset=\"utf-8\"><title>PromptProof Report</title></head><body>"
+##[debug]    echo "<h1>PromptProof Report (fallback)</h1>"
+##[debug]    echo "<p><strong>Note:</strong> Using console output because JSON/HTML report was not generated by the CLI.</p>"
+##[debug]    echo "<pre>"
+##[debug]    echo "$OUTPUT" | sed ''s/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g''
+##[debug]    echo "</pre>"
+##[debug]    echo "</body></html>"
+##[debug]  }} > "$ARTIFACT_NAME.html"
+##[debug]
+##[debug]  # Write minimal JSON next to HTML
+##[debug]  echo ''{{"total":0,"passed":0,"failed":0,"violations":[],"budgets":{{"cost_usd_total":0,"latency_ms_p95":0,"latency_ms_p99":0}},"mode":"warn","exitCode":0}}'' > "$ARTIFACT_NAME.json"
+##[debug]  fi
+##[debug]fi
+##[debug]
+##[debug]# Set outputs
+##[debug]echo "violations=$VIOLATIONS" >> $GITHUB_OUTPUT
+##[debug]echo "passed=$PASSED" >> $GITHUB_OUTPUT
+##[debug]echo "failed=$FAILED" >> $GITHUB_OUTPUT
+##[debug]# Map format to file extension
+##[debug]EXT="txt"
+##[debug]case "{24}" in
+##[debug]  html) EXT="html";;
+##[debug]  junit) EXT="xml";;
+##[debug]  json) EXT="json";;
+##[debug]  console) EXT="txt";;
+##[debug]esac
+##[debug]echo "report-path=$ARTIFACT_NAME.$EXT" >> $GITHUB_OUTPUT
+##[debug]echo "exit-code=$EXIT_CODE" >> $GITHUB_OUTPUT
+##[debug]echo "total-cost=$TOTAL_COST" >> $GITHUB_OUTPUT
+##[debug]echo "failed-tests=$FAILED" >> $GITHUB_OUTPUT
+##[debug]echo "regressions=$REGRESSIONS" >> $GITHUB_OUTPUT
+##[debug]
+##[debug]# Create summary
+##[debug]echo "## PromptProof Evaluation Results" >> $GITHUB_STEP_SUMMARY
+##[debug]echo "" >> $GITHUB_STEP_SUMMARY
+##[debug]
+##[debug]if [ "$VIOLATIONS" = "0" ]; then
+##[debug]  echo "✅ **All checks passed!**" >> $GITHUB_STEP_SUMMARY
+##[debug]else
+##[debug]  echo "❌ **$VIOLATIONS violations found**" >> $GITHUB_STEP_SUMMARY
+##[debug]fi
+##[debug]
+##[debug]echo "" >> $GITHUB_STEP_SUMMARY
+##[debug]echo "- Fixtures evaluated: $((PASSED + FAILED))" >> $GITHUB_STEP_SUMMARY
+##[debug]echo "- Passed: $PASSED" >> $GITHUB_STEP_SUMMARY
+##[debug]echo "- Failed: $FAILED" >> $GITHUB_STEP_SUMMARY
+##[debug]echo "- Total Cost: \$$TOTAL_COST" >> $GITHUB_STEP_SUMMARY
+##[debug]if [ "$REGRESSIONS" != "0" ]; then
+##[debug]  echo "- Regressions: $REGRESSIONS" >> $GITHUB_STEP_SUMMARY
+##[debug]fi
+##[debug]
+##[debug]echo "::endgroup::"
+##[debug]
+##[debug]# Exit with original code
+##[debug]exit $EXIT_CODE
+##[debug]'
+##[debug]..Evaluating Index:
+##[debug]....Evaluating inputs:
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'config'
+##[debug]..=> 'promptproof.yaml'
+##[debug]..Evaluating Index:
+##[debug]....Evaluating inputs:
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'report-artifact'
+##[debug]..=> 'promptproof-report'
+##[debug]..Evaluating Index:
+##[debug]....Evaluating inputs:
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'baseline-ref'
+##[debug]..=> ''
+##[debug]..Evaluating Index:
+##[debug]....Evaluating inputs:
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'baseline-ref'
+##[debug]..=> ''
+##[debug]..Evaluating Index:
+##[debug]....Evaluating inputs:
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'baseline-ref'
+##[debug]..=> ''
+##[debug]..Evaluating Index:
+##[debug]....Evaluating inputs:
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'baseline-ref'
+##[debug]..=> ''
+##[debug]..Evaluating Index:
+##[debug]....Evaluating inputs:
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'baseline-ref'
+##[debug]..=> ''
+##[debug]..Evaluating Index:
+##[debug]....Evaluating inputs:
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'baseline-ref'
+##[debug]..=> ''
+##[debug]..Evaluating Index:
+##[debug]....Evaluating inputs:
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'baseline-ref'
+##[debug]..=> ''
+##[debug]..Evaluating Index:
+##[debug]....Evaluating inputs:
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'mode'
+##[debug]..=> 'gate'
+##[debug]..Evaluating Index:
+##[debug]....Evaluating inputs:
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'max-run-cost'
+##[debug]..=> ''
+##[debug]..Evaluating Index:
+##[debug]....Evaluating inputs:
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'config'
+##[debug]..=> 'promptproof.yaml'
+##[debug]..Evaluating Index:
+##[debug]....Evaluating inputs:
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'max-run-cost'
+##[debug]..=> ''
+##[debug]..Evaluating Index:
+##[debug]....Evaluating inputs:
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'max-run-cost'
+##[debug]..=> ''
+##[debug]..Evaluating Index:
+##[debug]....Evaluating inputs:
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'max-run-cost'
+##[debug]..=> ''
+##[debug]..Evaluating Index:
+##[debug]....Evaluating inputs:
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'format'
+##[debug]..=> 'html'
+##[debug]..Evaluating Index:
+##[debug]....Evaluating inputs:
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'regress'
+##[debug]..=> ''
+##[debug]..Evaluating Index:
+##[debug]....Evaluating inputs:
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'baseline-ref'
+##[debug]..=> ''
+##[debug]..Evaluating Index:
+##[debug]....Evaluating inputs:
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'seed'
+##[debug]..=> ''
+##[debug]..Evaluating Index:
+##[debug]....Evaluating inputs:
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'seed'
+##[debug]..=> ''
+##[debug]..Evaluating Index:
+##[debug]....Evaluating inputs:
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'runs'
+##[debug]..=> ''
+##[debug]..Evaluating Index:
+##[debug]....Evaluating inputs:
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'runs'
+##[debug]..=> ''
+##[debug]..Evaluating Index:
+##[debug]....Evaluating inputs:
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'format'
+##[debug]..=> 'html'
+##[debug]..Evaluating Index:
+##[debug]....Evaluating inputs:
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'format'
+##[debug]..=> 'html'
+##[debug]..Evaluating Index:
+##[debug]....Evaluating inputs:
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'format'
+##[debug]..=> 'html'
+##[debug]=> 'echo "::group::Running PromptProof evaluation"
+##[debug]
+##[debug]# Determine effective config path (may be rewritten below)
+##[debug]EFFECTIVE_CONFIG="promptproof.yaml"
+##[debug]
+##[debug]# Prepare artifact base name and output path
+##[debug]ARTIFACT_NAME="promptproof-report"
+##[debug]if [ -z "$ARTIFACT_NAME" ]; then
+##[debug]  ARTIFACT_NAME="promptproof-report"
+##[debug]fi
+##[debug]
+##[debug]# Handle baseline-ref: fetch baseline snapshot files from the given ref
+##[debug]if [ -n "" ]; then
+##[debug]  echo "Fetching baseline snapshot from ref: "
+##[debug]  mkdir -p .promptproof/baselines
+##[debug]  # Find all last_green.json files at the ref
+##[debug]  SUITE_FILES=$(git ls-tree -r --name-only "" .promptproof/baselines 2>/dev/null | grep ''last_green.json'' || true)
+##[debug]  if [ -n "$SUITE_FILES" ]; then
+##[debug]    while read -r FILE; do
+##[debug]      [ -z "$FILE" ] && continue
+##[debug]      SUITE=$(echo "$FILE" | awk -F/ ''{print $3}'')
+##[debug]      mkdir -p ".promptproof/baselines/$SUITE"
+##[debug]      git show ":$FILE" > ".promptproof/baselines/$SUITE/last_green.json" || true
+##[debug]      BASELINE_JSON=".promptproof/baselines/$SUITE/last_green.json"
+##[debug]      if [ -f "$BASELINE_JSON" ]; then
+##[debug]        MANIFEST_REL=$(node -e "try{const b=require(''./$BASELINE_JSON'');console.log(b.path||'''')}catch(e){console.log('''')}")
+##[debug]        TAG=$(node -e "try{const b=require(''./$BASELINE_JSON'');console.log(b.tag||'''')}catch(e){console.log('''')}")
+##[debug]        if [ -n "$MANIFEST_REL" ]; then
+##[debug]          mkdir -p ".promptproof/baselines/$SUITE/$MANIFEST_REL"
+##[debug]          git show ":.promptproof/baselines/$SUITE/$MANIFEST_REL/manifest.json" > ".promptproof/baselines/$SUITE/$MANIFEST_REL/manifest.json" 2>/dev/null || true
+##[debug]        fi
+##[debug]        if [ -n "$TAG" ]; then
+##[debug]          mkdir -p ".promptproof/snapshots/$SUITE/$TAG"
+##[debug]          git show ":.promptproof/snapshots/$SUITE/$TAG/manifest.json" > ".promptproof/snapshots/$SUITE/$TAG/manifest.json" 2>/dev/null || true
+##[debug]        fi
+##[debug]      fi
+##[debug]    done <<< "$SUITE_FILES"
+##[debug]  else
+##[debug]    echo "No baseline snapshots found at ref " || true
+##[debug]  fi
+##[debug]fi
+##[debug]
+##[debug]# Possibly rewrite config to enforce mode and/or max-run-cost
+##[debug]NEEDS_REWRITE="0"
+##[debug]TMP_CONFIG="promptproof.effective.yaml"
+##[debug]
+##[debug]# Normalize mode synonyms and decide if we need to force mode in config
+##[debug]MODE_INPUT="gate"
+##[debug]if [ "$MODE_INPUT" = "report-only" ]; then MODE_INPUT="warn"; fi
+##[debug]if [ "$MODE_INPUT" = "gate" ]; then MODE_INPUT="fail"; fi
+##[debug]
+##[debug]if [ -n "$MODE_INPUT" ]; then
+##[debug]  NEEDS_REWRITE="1"
+##[debug]fi
+##[debug]
+##[debug]if [ -n "" ]; then
+##[debug]  NEEDS_REWRITE="1"
+##[debug]fi
+##[debug]
+##[debug]if [ "$NEEDS_REWRITE" = "1" ]; then
+##[debug]  echo "Rewriting policy config for requested overrides"
+##[debug]  # Start from original
+##[debug]  cp "promptproof.yaml" "$TMP_CONFIG"
+##[debug]  # Ensure budgets block exists if we need to write cost gate
+##[debug]  if [ -n "" ]; then
+##[debug]    if ! grep -Eq ''^\s*budgets:\s*$'' "$TMP_CONFIG"; then
+##[debug]      printf ''\n'' >> "$TMP_CONFIG"
+##[debug]      echo ''budgets:'' >> "$TMP_CONFIG"
+##[debug]    fi
+##[debug]    # If the key exists, replace it; otherwise, insert under budgets:
+##[debug]    if grep -Eq ''^\s*cost_usd_total_max:\s*'' "$TMP_CONFIG"; then
+##[debug]      sed -i.bak -E "s/^\s*cost_usd_total_max:\s*.*/  cost_usd_total_max: /" "$TMP_CONFIG"
+##[debug]    else
+##[debug]      awk -v val="" ''BEGIN{added=0} {print $0; if ($0 ~ /^budgets:\s*$/ && added==0){print "  cost_usd_total_max: " val; added=1}}'' "$TMP_CONFIG" > "$TMP_CONFIG.tmp" && mv "$TMP_CONFIG.tmp" "$TMP_CONFIG"
+##[debug]    fi
+##[debug]  fi
+##[debug]  # Force mode if requested (replace existing or append)
+##[debug]  if [ -n "$MODE_INPUT" ]; then
+##[debug]    if grep -Eq ''^\s*mode:\s*'' "$TMP_CONFIG"; then
+##[debug]      sed -i.bak -E "s/^\s*mode:\s*.*/mode: $MODE_INPUT/" "$TMP_CONFIG"
+##[debug]    else
+##[debug]      printf ''\nmode: %s\n'' "$MODE_INPUT" >> "$TMP_CONFIG"
+##[debug]    fi
+##[debug]  fi
+##[debug]  EFFECTIVE_CONFIG="$TMP_CONFIG"
+##[debug]fi
+##[debug]
+##[debug]# Select CLI package (default to beta if not set by previous step)
+##[debug]CLI_PACKAGE="${CLI_PACKAGE:-promptproof-cli@beta}"
+##[debug]
+##[debug]# Prepare command (force JSON alongside chosen format)
+##[debug]CMD="npx -y -p $CLI_PACKAGE promptproof eval --config $EFFECTIVE_CONFIG --format html --out $ARTIFACT_NAME"
+##[debug]
+##[debug]# Add mode flag if specified to warn/report-only
+##[debug]if [ "$MODE_INPUT" = "warn" ]; then CMD="$CMD --warn"; fi
+##[debug]# Add regress flag if specified
+##[debug]if [ "" = "true" ]; then
+##[debug]  CMD="$CMD --regress"
+##[debug]fi
+##[debug]# If baseline-ref provided, imply regress
+##[debug]if [ -n "" ]; then
+##[debug]  CMD="$CMD --regress"
+##[debug]fi
+##[debug]# Add seed if specified
+##[debug]if [ -n "" ]; then
+##[debug]  CMD="$CMD --seed "
+##[debug]fi
+##[debug]# Add runs if specified
+##[debug]if [ -n "" ]; then
+##[debug]  CMD="$CMD --runs "
+##[debug]fi
+##[debug]
+##[debug]# Run evaluation and capture output
+##[debug]set +e
+##[debug]OUTPUT=$($CMD 2>&1)
+##[debug]EXIT_CODE=$?
+##[debug]set -e
+##[debug]
+##[debug]echo "$OUTPUT"
+##[debug]
+##[debug]# Parse output for metrics (prefer JSON report if present)
+##[debug]JSON_REPORT="$ARTIFACT_NAME.json"
+##[debug]if [ -f "$JSON_REPORT" ]; then
+##[debug]  VIOLATIONS=$(node -e "console.log(require(''./$JSON_REPORT'').violations?.length ?? 0)")
+##[debug]  PASSED=$(node -e "console.log(require(''./$JSON_REPORT'').passed ?? 0)")
+##[debug]  FAILED=$(node -e "console.log(require(''./$JSON_REPORT'').failed ?? 0)")
+##[debug]  TOTAL_COST=$(node -e "console.log((require(''./$JSON_REPORT'').budgets?.cost_usd_total ?? 0).toFixed(4))")
+##[debug]  REGRESSIONS=$(node -e "const r=require(''./$JSON_REPORT'').regression; console.log(r && r.new_failures ? r.new_failures.length : 0)")
+##[debug]
+##[debug]  # If HTML is missing (older CLI), synthesize a simple HTML report from JSON
+##[debug]  if [ ! -f "$ARTIFACT_NAME.html" ] && [ "html" = "html" ]; then
+##[debug]    node -e "const fs=require(''fs'');const r=JSON.parse(fs.readFileSync(''$JSON_REPORT'',''utf8''));function esc(s){return String(s).replace(/&/g,''&amp;'').replace(/</g,''&lt;'').replace(/>/g,''&gt;'')}const rows=(r.violations||[]).slice(0,200).map(v=>`<tr><td>${esc(v.checkId)}</td><td>${esc(v.recordId)}</td><td>${esc(v.message||'''')}</td></tr>`).join('''');const html=`<!doctype html><meta charset=''utf-8''><title>PromptProof Report</title><h1>PromptProof Report</h1><p><b>Total:</b> ${r.total||0} · <b>Passed:</b> ${r.passed||0} · <b>Failed:</b> ${r.failed||0} · <b>Total Cost:</b> $${(r.budgets&&r.budgets.cost_usd_total||0).toFixed(4)}</p><h2>Violations (${(r.violations||[]).length})</h2><table border=''1'' cellspacing=''0'' cellpadding=''6''><tr><th>Check</th><th>Record</th><th>Message</th></tr>${rows}</table>`;fs.writeFileSync(''$ARTIFACT_NAME.html'',html);"
+##[debug]  fi
+##[debug]else
+##[debug]  # If JSON wasn''t produced (older CLI), run a second pass to emit JSON deterministically
+##[debug]  echo "JSON report missing after first run; invoking JSON reporter"
+##[debug]  set +e
+##[debug]  OUTPUT_JSON=$(npx -y -p "$CLI_PACKAGE" promptproof eval --config "$EFFECTIVE_CONFIG" --format json --out "$ARTIFACT_NAME" 2>&1)
+##[debug]  EXIT_CODE_JSON=$?
+##[debug]  set -e
+##[debug]  echo "$OUTPUT_JSON"
+##[debug]  
+##[debug]  if [ -f "$JSON_REPORT" ]; then
+##[debug]    VIOLATIONS=$(node -e "console.log(require(''./$JSON_REPORT'').violations?.length ?? 0)")
+##[debug]    PASSED=$(node -e "console.log(require(''./$JSON_REPORT'').passed ?? 0)")
+##[debug]    FAILED=$(node -e "console.log(require(''./$JSON_REPORT'').failed ?? 0)")
+##[debug]    TOTAL_COST=$(node -e "console.log((require(''./$JSON_REPORT'').budgets?.cost_usd_total ?? 0).toFixed(4))")
+##[debug]    REGRESSIONS=$(node -e "const r=require(''./$JSON_REPORT'').regression; console.log(r && r.new_failures ? r.new_failures.length : 0)")
+##[debug]    # Synthesize HTML from JSON if requested format is html and file missing
+##[debug]    if [ ! -f "$ARTIFACT_NAME.html" ] && [ "html" = "html" ]; then
+##[debug]      node -e "const fs=require(''fs'');const r=JSON.parse(fs.readFileSync(''$JSON_REPORT'',''utf8''));function esc(s){return String(s).replace(/&/g,''&amp;'').replace(/</g,''&lt;'').replace(/>/g,''&gt;'')}const rows=(r.violations||[]).slice(0,200).map(v=>`<tr><td>${esc(v.checkId)}</td><td>${esc(v.recordId)}</td><td>${esc(v.message||'''')}</td></tr>`).join('''');const html=`<!doctype html><meta charset=''utf-8''><title>PromptProof Report</title><h1>PromptProof Report</h1><p><b>Total:</b> ${r.total||0} · <b>Passed:</b> ${r.passed||0} · <b>Failed:</b> ${r.failed||0} · <b>Total Cost:</b> $${(r.budgets&&r.budgets.cost_usd_total||0).toFixed(4)}</p><h2>Violations (${(r.violations||[]).length})</h2><table border=''1'' cellspacing=''0'' cellpadding=''6''><tr><th>Check</th><th>Record</th><th>Message</th></tr>${rows}</table>`;fs.writeFileSync(''$ARTIFACT_NAME.html'',html);"
+##[debug]    fi
+##[debug]  else
+##[debug]  VIOLATIONS=$(echo "$OUTPUT" | grep -oP ''\\d+ violations found'' | grep -oP ''\\d+'' || echo "0")
+##[debug]  PASSED=$(echo "$OUTPUT" | grep -oP ''Passed: \\d+'' | grep -oP ''\\d+'' || echo "0")
+##[debug]  FAILED=$(echo "$OUTPUT" | grep -oP ''Failed: \\d+'' | grep -oP ''\\d+'' || echo "0")
+##[debug]  TOTAL_COST="0.0000"
+##[debug]  REGRESSIONS="0"
+##[debug]
+##[debug]  # Fallback: emit simple HTML and JSON if reporter files are missing
+##[debug]  echo "No JSON report found; creating fallback report files"
+##[debug]  {
+##[debug]    echo "<html><head><meta charset=\"utf-8\"><title>PromptProof Report</title></head><body>"
+##[debug]    echo "<h1>PromptProof Report (fallback)</h1>"
+##[debug]    echo "<p><strong>Note:</strong> Using console output because JSON/HTML report was not generated by the CLI.</p>"
+##[debug]    echo "<pre>"
+##[debug]    echo "$OUTPUT" | sed ''s/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g''
+##[debug]    echo "</pre>"
+##[debug]    echo "</body></html>"
+##[debug]  } > "$ARTIFACT_NAME.html"
+##[debug]
+##[debug]  # Write minimal JSON next to HTML
+##[debug]  echo ''{"total":0,"passed":0,"failed":0,"violations":[],"budgets":{"cost_usd_total":0,"latency_ms_p95":0,"latency_ms_p99":0},"mode":"warn","exitCode":0}'' > "$ARTIFACT_NAME.json"
+##[debug]  fi
+##[debug]fi
+##[debug]
+##[debug]# Set outputs
+##[debug]echo "violations=$VIOLATIONS" >> $GITHUB_OUTPUT
+##[debug]echo "passed=$PASSED" >> $GITHUB_OUTPUT
+##[debug]echo "failed=$FAILED" >> $GITHUB_OUTPUT
+##[debug]# Map format to file extension
+##[debug]EXT="txt"
+##[debug]case "html" in
+##[debug]  html) EXT="html";;
+##[debug]  junit) EXT="xml";;
+##[debug]  json) EXT="json";;
+##[debug]  console) EXT="txt";;
+##[debug]esac
+##[debug]echo "report-path=$ARTIFACT_NAME.$EXT" >> $GITHUB_OUTPUT
+##[debug]echo "exit-code=$EXIT_CODE" >> $GITHUB_OUTPUT
+##[debug]echo "total-cost=$TOTAL_COST" >> $GITHUB_OUTPUT
+##[debug]echo "failed-tests=$FAILED" >> $GITHUB_OUTPUT
+##[debug]echo "regressions=$REGRESSIONS" >> $GITHUB_OUTPUT
+##[debug]
+##[debug]# Create summary
+##[debug]echo "## PromptProof Evaluation Results" >> $GITHUB_STEP_SUMMARY
+##[debug]echo "" >> $GITHUB_STEP_SUMMARY
+##[debug]
+##[debug]if [ "$VIOLATIONS" = "0" ]; then
+##[debug]  echo "✅ **All checks passed!**" >> $GITHUB_STEP_SUMMARY
+##[debug]else
+##[debug]  echo "❌ **$VIOLATIONS violations found**" >> $GITHUB_STEP_SUMMARY
+##[debug]fi
+##[debug]
+##[debug]echo "" >> $GITHUB_STEP_SUMMARY
+##[debug]echo "- Fixtures evaluated: $((PASSED + FAILED))" >> $GITHUB_STEP_SUMMARY
+##[debug]echo "- Passed: $PASSED" >> $GITHUB_STEP_SUMMARY
+##[debug]echo "- Failed: $FAILED" >> $GITHUB_STEP_SUMMARY
+##[debug]echo "- Total Cost: \$$TOTAL_COST" >> $GITHUB_STEP_SUMMARY
+##[debug]if [ "$REGRESSIONS" != "0" ]; then
+##[debug]  echo "- Regressions: $REGRESSIONS" >> $GITHUB_STEP_SUMMARY
+##[debug]fi
+##[debug]
+##[debug]echo "::endgroup::"
+##[debug]
+##[debug]# Exit with original code
+##[debug]exit $EXIT_CODE
+##[debug]'
+##[debug]Result: 'echo "::group::Running PromptProof evaluation"
+##[debug]
+##[debug]# Determine effective config path (may be rewritten below)
+##[debug]EFFECTIVE_CONFIG="promptproof.yaml"
+##[debug]
+##[debug]# Prepare artifact base name and output path
+##[debug]ARTIFACT_NAME="promptproof-report"
+##[debug]if [ -z "$ARTIFACT_NAME" ]; then
+##[debug]  ARTIFACT_NAME="promptproof-report"
+##[debug]fi
+##[debug]
+##[debug]# Handle baseline-ref: fetch baseline snapshot files from the given ref
+##[debug]if [ -n "" ]; then
+##[debug]  echo "Fetching baseline snapshot from ref: "
+##[debug]  mkdir -p .promptproof/baselines
+##[debug]  # Find all last_green.json files at the ref
+##[debug]  SUITE_FILES=$(git ls-tree -r --name-only "" .promptproof/baselines 2>/dev/null | grep ''last_green.json'' || true)
+##[debug]  if [ -n "$SUITE_FILES" ]; then
+##[debug]    while read -r FILE; do
+##[debug]      [ -z "$FILE" ] && continue
+##[debug]      SUITE=$(echo "$FILE" | awk -F/ ''{print $3}'')
+##[debug]      mkdir -p ".promptproof/baselines/$SUITE"
+##[debug]      git show ":$FILE" > ".promptproof/baselines/$SUITE/last_green.json" || true
+##[debug]      BASELINE_JSON=".promptproof/baselines/$SUITE/last_green.json"
+##[debug]      if [ -f "$BASELINE_JSON" ]; then
+##[debug]        MANIFEST_REL=$(node -e "try{const b=require(''./$BASELINE_JSON'');console.log(b.path||'''')}catch(e){console.log('''')}")
+##[debug]        TAG=$(node -e "try{const b=require(''./$BASELINE_JSON'');console.log(b.tag||'''')}catch(e){console.log('''')}")
+##[debug]        if [ -n "$MANIFEST_REL" ]; then
+##[debug]          mkdir -p ".promptproof/baselines/$SUITE/$MANIFEST_REL"
+##[debug]          git show ":.promptproof/baselines/$SUITE/$MANIFEST_REL/manifest.json" > ".promptproof/baselines/$SUITE/$MANIFEST_REL/manifest.json" 2>/dev/null || true
+##[debug]        fi
+##[debug]        if [ -n "$TAG" ]; then
+##[debug]          mkdir -p ".promptproof/snapshots/$SUITE/$TAG"
+##[debug]          git show ":.promptproof/snapshots/$SUITE/$TAG/manifest.json" > ".promptproof/snapshots/$SUITE/$TAG/manifest.json" 2>/dev/null || true
+##[debug]        fi
+##[debug]      fi
+##[debug]    done <<< "$SUITE_FILES"
+##[debug]  else
+##[debug]    echo "No baseline snapshots found at ref " || true
+##[debug]  fi
+##[debug]fi
+##[debug]
+##[debug]# Possibly rewrite config to enforce mode and/or max-run-cost
+##[debug]NEEDS_REWRITE="0"
+##[debug]TMP_CONFIG="promptproof.effective.yaml"
+##[debug]
+##[debug]# Normalize mode synonyms and decide if we need to force mode in config
+##[debug]MODE_INPUT="gate"
+##[debug]if [ "$MODE_INPUT" = "report-only" ]; then MODE_INPUT="warn"; fi
+##[debug]if [ "$MODE_INPUT" = "gate" ]; then MODE_INPUT="fail"; fi
+##[debug]
+##[debug]if [ -n "$MODE_INPUT" ]; then
+##[debug]  NEEDS_REWRITE="1"
+##[debug]fi
+##[debug]
+##[debug]if [ -n "" ]; then
+##[debug]  NEEDS_REWRITE="1"
+##[debug]fi
+##[debug]
+##[debug]if [ "$NEEDS_REWRITE" = "1" ]; then
+##[debug]  echo "Rewriting policy config for requested overrides"
+##[debug]  # Start from original
+##[debug]  cp "promptproof.yaml" "$TMP_CONFIG"
+##[debug]  # Ensure budgets block exists if we need to write cost gate
+##[debug]  if [ -n "" ]; then
+##[debug]    if ! grep -Eq ''^\s*budgets:\s*$'' "$TMP_CONFIG"; then
+##[debug]      printf ''\n'' >> "$TMP_CONFIG"
+##[debug]      echo ''budgets:'' >> "$TMP_CONFIG"
+##[debug]    fi
+##[debug]    # If the key exists, replace it; otherwise, insert under budgets:
+##[debug]    if grep -Eq ''^\s*cost_usd_total_max:\s*'' "$TMP_CONFIG"; then
+##[debug]      sed -i.bak -E "s/^\s*cost_usd_total_max:\s*.*/  cost_usd_total_max: /" "$TMP_CONFIG"
+##[debug]    else
+##[debug]      awk -v val="" ''BEGIN{added=0} {print $0; if ($0 ~ /^budgets:\s*$/ && added==0){print "  cost_usd_total_max: " val; added=1}}'' "$TMP_CONFIG" > "$TMP_CONFIG.tmp" && mv "$TMP_CONFIG.tmp" "$TMP_CONFIG"
+##[debug]    fi
+##[debug]  fi
+##[debug]  # Force mode if requested (replace existing or append)
+##[debug]  if [ -n "$MODE_INPUT" ]; then
+##[debug]    if grep -Eq ''^\s*mode:\s*'' "$TMP_CONFIG"; then
+##[debug]      sed -i.bak -E "s/^\s*mode:\s*.*/mode: $MODE_INPUT/" "$TMP_CONFIG"
+##[debug]    else
+##[debug]      printf ''\nmode: %s\n'' "$MODE_INPUT" >> "$TMP_CONFIG"
+##[debug]    fi
+##[debug]  fi
+##[debug]  EFFECTIVE_CONFIG="$TMP_CONFIG"
+##[debug]fi
+##[debug]
+##[debug]# Select CLI package (default to beta if not set by previous step)
+##[debug]CLI_PACKAGE="${CLI_PACKAGE:-promptproof-cli@beta}"
+##[debug]
+##[debug]# Prepare command (force JSON alongside chosen format)
+##[debug]CMD="npx -y -p $CLI_PACKAGE promptproof eval --config $EFFECTIVE_CONFIG --format html --out $ARTIFACT_NAME"
+##[debug]
+##[debug]# Add mode flag if specified to warn/report-only
+##[debug]if [ "$MODE_INPUT" = "warn" ]; then CMD="$CMD --warn"; fi
+##[debug]# Add regress flag if specified
+##[debug]if [ "" = "true" ]; then
+##[debug]  CMD="$CMD --regress"
+##[debug]fi
+##[debug]# If baseline-ref provided, imply regress
+##[debug]if [ -n "" ]; then
+##[debug]  CMD="$CMD --regress"
+##[debug]fi
+##[debug]# Add seed if specified
+##[debug]if [ -n "" ]; then
+##[debug]  CMD="$CMD --seed "
+##[debug]fi
+##[debug]# Add runs if specified
+##[debug]if [ -n "" ]; then
+##[debug]  CMD="$CMD --runs "
+##[debug]fi
+##[debug]
+##[debug]# Run evaluation and capture output
+##[debug]set +e
+##[debug]OUTPUT=$($CMD 2>&1)
+##[debug]EXIT_CODE=$?
+##[debug]set -e
+##[debug]
+##[debug]echo "$OUTPUT"
+##[debug]
+##[debug]# Parse output for metrics (prefer JSON report if present)
+##[debug]JSON_REPORT="$ARTIFACT_NAME.json"
+##[debug]if [ -f "$JSON_REPORT" ]; then
+##[debug]  VIOLATIONS=$(node -e "console.log(require(''./$JSON_REPORT'').violations?.length ?? 0)")
+##[debug]  PASSED=$(node -e "console.log(require(''./$JSON_REPORT'').passed ?? 0)")
+##[debug]  FAILED=$(node -e "console.log(require(''./$JSON_REPORT'').failed ?? 0)")
+##[debug]  TOTAL_COST=$(node -e "console.log((require(''./$JSON_REPORT'').budgets?.cost_usd_total ?? 0).toFixed(4))")
+##[debug]  REGRESSIONS=$(node -e "const r=require(''./$JSON_REPORT'').regression; console.log(r && r.new_failures ? r.new_failures.length : 0)")
+##[debug]
+##[debug]  # If HTML is missing (older CLI), synthesize a simple HTML report from JSON
+##[debug]  if [ ! -f "$ARTIFACT_NAME.html" ] && [ "html" = "html" ]; then
+##[debug]    node -e "const fs=require(''fs'');const r=JSON.parse(fs.readFileSync(''$JSON_REPORT'',''utf8''));function esc(s){return String(s).replace(/&/g,''&amp;'').replace(/</g,''&lt;'').replace(/>/g,''&gt;'')}const rows=(r.violations||[]).slice(0,200).map(v=>`<tr><td>${esc(v.checkId)}</td><td>${esc(v.recordId)}</td><td>${esc(v.message||'''')}</td></tr>`).join('''');const html=`<!doctype html><meta charset=''utf-8''><title>PromptProof Report</title><h1>PromptProof Report</h1><p><b>Total:</b> ${r.total||0} · <b>Passed:</b> ${r.passed||0} · <b>Failed:</b> ${r.failed||0} · <b>Total Cost:</b> $${(r.budgets&&r.budgets.cost_usd_total||0).toFixed(4)}</p><h2>Violations (${(r.violations||[]).length})</h2><table border=''1'' cellspacing=''0'' cellpadding=''6''><tr><th>Check</th><th>Record</th><th>Message</th></tr>${rows}</table>`;fs.writeFileSync(''$ARTIFACT_NAME.html'',html);"
+##[debug]  fi
+##[debug]else
+##[debug]  # If JSON wasn''t produced (older CLI), run a second pass to emit JSON deterministically
+##[debug]  echo "JSON report missing after first run; invoking JSON reporter"
+##[debug]  set +e
+##[debug]  OUTPUT_JSON=$(npx -y -p "$CLI_PACKAGE" promptproof eval --config "$EFFECTIVE_CONFIG" --format json --out "$ARTIFACT_NAME" 2>&1)
+##[debug]  EXIT_CODE_JSON=$?
+##[debug]  set -e
+##[debug]  echo "$OUTPUT_JSON"
+##[debug]  
+##[debug]  if [ -f "$JSON_REPORT" ]; then
+##[debug]    VIOLATIONS=$(node -e "console.log(require(''./$JSON_REPORT'').violations?.length ?? 0)")
+##[debug]    PASSED=$(node -e "console.log(require(''./$JSON_REPORT'').passed ?? 0)")
+##[debug]    FAILED=$(node -e "console.log(require(''./$JSON_REPORT'').failed ?? 0)")
+##[debug]    TOTAL_COST=$(node -e "console.log((require(''./$JSON_REPORT'').budgets?.cost_usd_total ?? 0).toFixed(4))")
+##[debug]    REGRESSIONS=$(node -e "const r=require(''./$JSON_REPORT'').regression; console.log(r && r.new_failures ? r.new_failures.length : 0)")
+##[debug]    # Synthesize HTML from JSON if requested format is html and file missing
+##[debug]    if [ ! -f "$ARTIFACT_NAME.html" ] && [ "html" = "html" ]; then
+##[debug]      node -e "const fs=require(''fs'');const r=JSON.parse(fs.readFileSync(''$JSON_REPORT'',''utf8''));function esc(s){return String(s).replace(/&/g,''&amp;'').replace(/</g,''&lt;'').replace(/>/g,''&gt;'')}const rows=(r.violations||[]).slice(0,200).map(v=>`<tr><td>${esc(v.checkId)}</td><td>${esc(v.recordId)}</td><td>${esc(v.message||'''')}</td></tr>`).join('''');const html=`<!doctype html><meta charset=''utf-8''><title>PromptProof Report</title><h1>PromptProof Report</h1><p><b>Total:</b> ${r.total||0} · <b>Passed:</b> ${r.passed||0} · <b>Failed:</b> ${r.failed||0} · <b>Total Cost:</b> $${(r.budgets&&r.budgets.cost_usd_total||0).toFixed(4)}</p><h2>Violations (${(r.violations||[]).length})</h2><table border=''1'' cellspacing=''0'' cellpadding=''6''><tr><th>Check</th><th>Record</th><th>Message</th></tr>${rows}</table>`;fs.writeFileSync(''$ARTIFACT_NAME.html'',html);"
+##[debug]    fi
+##[debug]  else
+##[debug]  VIOLATIONS=$(echo "$OUTPUT" | grep -oP ''\\d+ violations found'' | grep -oP ''\\d+'' || echo "0")
+##[debug]  PASSED=$(echo "$OUTPUT" | grep -oP ''Passed: \\d+'' | grep -oP ''\\d+'' || echo "0")
+##[debug]  FAILED=$(echo "$OUTPUT" | grep -oP ''Failed: \\d+'' | grep -oP ''\\d+'' || echo "0")
+##[debug]  TOTAL_COST="0.0000"
+##[debug]  REGRESSIONS="0"
+##[debug]
+##[debug]  # Fallback: emit simple HTML and JSON if reporter files are missing
+##[debug]  echo "No JSON report found; creating fallback report files"
+##[debug]  {
+##[debug]    echo "<html><head><meta charset=\"utf-8\"><title>PromptProof Report</title></head><body>"
+##[debug]    echo "<h1>PromptProof Report (fallback)</h1>"
+##[debug]    echo "<p><strong>Note:</strong> Using console output because JSON/HTML report was not generated by the CLI.</p>"
+##[debug]    echo "<pre>"
+##[debug]    echo "$OUTPUT" | sed ''s/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g''
+##[debug]    echo "</pre>"
+##[debug]    echo "</body></html>"
+##[debug]  } > "$ARTIFACT_NAME.html"
+##[debug]
+##[debug]  # Write minimal JSON next to HTML
+##[debug]  echo ''{"total":0,"passed":0,"failed":0,"violations":[],"budgets":{"cost_usd_total":0,"latency_ms_p95":0,"latency_ms_p99":0},"mode":"warn","exitCode":0}'' > "$ARTIFACT_NAME.json"
+##[debug]  fi
+##[debug]fi
+##[debug]
+##[debug]# Set outputs
+##[debug]echo "violations=$VIOLATIONS" >> $GITHUB_OUTPUT
+##[debug]echo "passed=$PASSED" >> $GITHUB_OUTPUT
+##[debug]echo "failed=$FAILED" >> $GITHUB_OUTPUT
+##[debug]# Map format to file extension
+##[debug]EXT="txt"
+##[debug]case "html" in
+##[debug]  html) EXT="html";;
+##[debug]  junit) EXT="xml";;
+##[debug]  json) EXT="json";;
+##[debug]  console) EXT="txt";;
+##[debug]esac
+##[debug]echo "report-path=$ARTIFACT_NAME.$EXT" >> $GITHUB_OUTPUT
+##[debug]echo "exit-code=$EXIT_CODE" >> $GITHUB_OUTPUT
+##[debug]echo "total-cost=$TOTAL_COST" >> $GITHUB_OUTPUT
+##[debug]echo "failed-tests=$FAILED" >> $GITHUB_OUTPUT
+##[debug]echo "regressions=$REGRESSIONS" >> $GITHUB_OUTPUT
+##[debug]
+##[debug]# Create summary
+##[debug]echo "## PromptProof Evaluation Results" >> $GITHUB_STEP_SUMMARY
+##[debug]echo "" >> $GITHUB_STEP_SUMMARY
+##[debug]
+##[debug]if [ "$VIOLATIONS" = "0" ]; then
+##[debug]  echo "✅ **All checks passed!**" >> $GITHUB_STEP_SUMMARY
+##[debug]else
+##[debug]  echo "❌ **$VIOLATIONS violations found**" >> $GITHUB_STEP_SUMMARY
+##[debug]fi
+##[debug]
+##[debug]echo "" >> $GITHUB_STEP_SUMMARY
+##[debug]echo "- Fixtures evaluated: $((PASSED + FAILED))" >> $GITHUB_STEP_SUMMARY
+##[debug]echo "- Passed: $PASSED" >> $GITHUB_STEP_SUMMARY
+##[debug]echo "- Failed: $FAILED" >> $GITHUB_STEP_SUMMARY
+##[debug]echo "- Total Cost: \$$TOTAL_COST" >> $GITHUB_STEP_SUMMARY
+##[debug]if [ "$REGRESSIONS" != "0" ]; then
+##[debug]  echo "- Regressions: $REGRESSIONS" >> $GITHUB_STEP_SUMMARY
+##[debug]fi
+##[debug]
+##[debug]echo "::endgroup::"
+##[debug]
+##[debug]# Exit with original code
+##[debug]exit $EXIT_CODE
+##[debug]'
+##[debug]Loading env
+Run echo "::group::Running PromptProof evaluation"
+##[debug]/usr/bin/bash --noprofile --norc -e -o pipefail /home/runner/work/_temp/33348993-9eea-4fe5-9337-5b8ba7c2a0ee.sh
+::group::Running PromptProof evaluation
+Running PromptProof evaluation
+Error: Process completed with exit code 2.
+##[debug]Set output violations = 0
+##[debug]Set output passed = 0
+##[debug]Set output failed = 0
+##[debug]Set output report-path = promptproof-report.html
+##[debug]Set output exit-code = 2
+##[debug]Set output total-cost = 0.0000
+##[debug]Set output failed-tests = 0
+##[debug]Set output regressions = 0
+##[debug]Finished: run
+##[debug]Evaluating condition for step: 'run'
+##[debug]Evaluating: always()
+##[debug]Evaluating always:
+##[debug]=> true
+##[debug]Result: true
+##[debug]Starting: run
+##[debug]Loading inputs
+##[debug]Evaluating: inputs.report-artifact
+##[debug]Evaluating Index:
+##[debug]..Evaluating inputs:
+##[debug]..=> Object
+##[debug]..Evaluating String:
+##[debug]..=> 'report-artifact'
+##[debug]=> 'promptproof-report'
+##[debug]Result: 'promptproof-report'
+##[debug]Evaluating: format('{0}.*
+##[debug]', inputs.report-artifact)
+##[debug]Evaluating format:
+##[debug]..Evaluating String:
+##[debug]..=> '{0}.*
+##[debug]'
+##[debug]..Evaluating Index:
+##[debug]....Evaluating inputs:
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'report-artifact'
+##[debug]..=> 'promptproof-report'
+##[debug]=> 'promptproof-report.*
+##[debug]'
+##[debug]Result: 'promptproof-report.*
+##[debug]'
+##[debug]Loading env
+Run actions/upload-artifact@v4
+##[debug]followSymbolicLinks 'true'
+##[debug]implicitDescendants 'true'
+##[debug]omitBrokenSymbolicLinks 'true'
+##[debug]excludeHiddenFiles 'true'
+##[debug]followSymbolicLinks 'true'
+##[debug]implicitDescendants 'true'
+##[debug]matchDirectories 'true'
+##[debug]omitBrokenSymbolicLinks 'true'
+##[debug]excludeHiddenFiles 'true'
+##[debug]Search path '/home/runner/work/promptproof-demo-project/promptproof-demo-project'
+##[debug]File:/home/runner/work/promptproof-demo-project/promptproof-demo-project/promptproof-report.html was found using the provided searchPath
+##[debug]File:/home/runner/work/promptproof-demo-project/promptproof-demo-project/promptproof-report.json was found using the provided searchPath
+With the provided path, there will be 2 files uploaded
+##[debug]Root artifact directory is /home/runner/work/promptproof-demo-project/promptproof-demo-project
+Artifact name is valid!
+Root directory input is valid!
+##[debug]Workflow Run Backend ID: 3b7f1bdc-64aa-47be-9676-d48890a070a0
+##[debug]Workflow Job Run Backend ID: 459d3c34-0c40-5ac6-a341-7017a7799ba4
+##[debug][Request] CreateArtifact https://results-receiver.actions.githubusercontent.com/twirp/github.actions.results.api.v1.ArtifactService/CreateArtifact
+##[debug][Response] - 200
+##[debug]Headers: {
+##[debug]  "content-length": "580",
+##[debug]  "content-type": "application/json",
+##[debug]  "date": "Tue, 12 Aug 2025 03:11:03 GMT",
+##[debug]  "x-github-backend": "Kubernetes",
+##[debug]  "x-github-request-id": "BC22:29AF48:38CFD7:4ACC28:689AB0C7"
+##[debug]}
+::add-mask::***
+::add-mask::***
+##[debug]Body: {
+##[debug]  "ok": true,
+##[debug]  "signed_upload_url": "https://productionresultssa13.blob.core.windows.net/actions-results/3b7f1bdc-64aa-47be-9676-d48890a070a0/workflow-job-run-459d3c34-0c40-5ac6-a341-7017a7799ba4/artifacts/17ff1ce71e1c242a7c508407b5e122d4a542c2a8563ef40f7583d836cd3258a0.zip?se=2025-08-12T04%3A11%3A03Z&sig=***&ske=2025-08-12T14%3A05%3A43Z&skoid=ca7593d4-ee42-46cd-af88-8b886a2f84eb&sks=b&skt=2025-08-12T02%3A05%3A43Z&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skv=2025-05-05&sp=cw&spr=https&sr=b&st=2025-08-12T03%3A10%3A58Z&sv=2025-05-05"
+##[debug]}
+##[debug]Creating Artifact archive with compressionLevel: 6
+##[debug]Zip write high watermark value 8388608
+##[debug]Zip read high watermark value 8388608
+##[debug]Uploading artifact zip to blob storage with maxConcurrency: 5, bufferSize: 8388608
+Beginning upload of artifact content to blob storage
+##[debug]Zip stream for upload has ended.
+##[debug]Zip stream for upload has finished.
+Uploaded bytes 744
+Finished uploading artifact content to blob storage!
+SHA256 digest of uploaded artifact zip is a8894a59f559be66e50327973eafb6be97c109f94c0e8e8570d4c7103bc13941
+Finalizing artifact upload
+##[debug][Request] FinalizeArtifact https://results-receiver.actions.githubusercontent.com/twirp/github.actions.results.api.v1.ArtifactService/FinalizeArtifact
+##[debug][Response] - 200
+##[debug]Headers: {
+##[debug]  "content-length": "38",
+##[debug]  "content-type": "application/json",
+##[debug]  "date": "Tue, 12 Aug 2025 03:11:03 GMT",
+##[debug]  "x-github-backend": "Kubernetes",
+##[debug]  "x-github-request-id": "BC22:29AF48:38D047:4ACCAC:689AB0C7"
+##[debug]}
+##[debug]Body: {
+##[debug]  "ok": true,
+##[debug]  "artifact_id": "3740847823"
+##[debug]}
+Artifact promptproof-report.zip successfully finalized. Artifact ID 3740847823
+Artifact promptproof-report has been successfully uploaded! Final size is 744 bytes. Artifact ID is 3740847823
+Artifact download URL: https://github.com/geminimir/promptproof-demo-project/actions/runs/16896182702/artifacts/3740847823
+##[debug]Node Action run completed with exit code 0
+##[debug]Set output artifact-id = 3740847823
+##[debug]Set output artifact-digest = a8894a59f559be66e50327973eafb6be97c109f94c0e8e8570d4c7103bc13941
+##[debug]Set output artifact-url = https://github.com/geminimir/promptproof-demo-project/actions/runs/16896182702/artifacts/3740847823
+##[debug]Finished: run
+##[debug]Evaluating: inputs.report-artifact
+##[debug]Evaluating Index:
+##[debug]..Evaluating inputs:
+##[debug]..=> Object
+##[debug]..Evaluating String:
+##[debug]..=> 'report-artifact'
+##[debug]=> 'promptproof-report'
+##[debug]Result: 'promptproof-report'
+##[debug]Evaluating condition for step: 'run'
+##[debug]Evaluating: ((github.event_name == 'pull_request') && always())
+##[debug]Evaluating And:
+##[debug]..Evaluating Equal:
+##[debug]....Evaluating Index:
+##[debug]......Evaluating github:
+##[debug]......=> Object
+##[debug]......Evaluating String:
+##[debug]......=> 'event_name'
+##[debug]....=> 'pull_request'
+##[debug]....Evaluating String:
+##[debug]....=> 'pull_request'
+##[debug]..=> true
+##[debug]..Evaluating always:
+##[debug]..=> true
+##[debug]=> true
+##[debug]Expanded: (('pull_request' == 'pull_request') && true)
+##[debug]Result: true
+##[debug]Starting: run
+##[debug]Loading inputs
+##[debug]Evaluating: github.token
+##[debug]Evaluating Index:
+##[debug]..Evaluating github:
+##[debug]..=> Object
+##[debug]..Evaluating String:
+##[debug]..=> 'token'
+##[debug]=> '***'
+##[debug]Result: '***'
+##[debug]Evaluating: (runner.debug == '1')
+##[debug]Evaluating Equal:
+##[debug]..Evaluating Index:
+##[debug]....Evaluating runner:
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'debug'
+##[debug]..=> '1'
+##[debug]..Evaluating String:
+##[debug]..=> '1'
+##[debug]=> true
+##[debug]Expanded: ('1' == '1')
+##[debug]Result: true
+##[debug]Loading env
+Run actions/github-script@v7
+request {
+  method: 'GET',
+  baseUrl: 'https://api.github.com',
+  headers: {
+    accept: 'application/vnd.github.v3+json',
+    'user-agent': 'actions/github-script octokit-core.js/5.0.1 Node.js/20.19.3 (linux; x64)'
+  },
+  mediaType: { format: '', previews: [] },
+  request: {
+    agent: Agent {
+      _events: [Object: null prototype],
+      _eventsCount: 2,
+      _maxListeners: undefined,
+      defaultPort: 443,
+      protocol: 'https:',
+      options: [Object: null prototype],
+      requests: [Object: null prototype] {},
+      sockets: [Object: null prototype] {},
+      freeSockets: [Object: null prototype] {},
+      keepAliveMsecs: 1000,
+      keepAlive: true,
+      maxSockets: Infinity,
+      maxFreeSockets: 256,
+      scheduling: 'lifo',
+      maxTotalSockets: Infinity,
+      totalSocketCount: 0,
+      maxCachedSessions: 100,
+      _sessionCache: [Object],
+      [Symbol(shapeMode)]: false,
+      [Symbol(kCapture)]: false
+    },
+    fetch: [Function: proxyFetch],
+    hook: [Function: bound bound register]
+  },
+  url: '/repos/{owner}/{repo}/issues/{issue_number}/comments',
+  owner: 'geminimir',
+  repo: 'promptproof-demo-project',
+  issue_number: 1
+}
+GET /repos/geminimir/promptproof-demo-project/issues/1/comments - 200 in 293ms
+request {
+  method: 'PATCH',
+  baseUrl: 'https://api.github.com',
+  headers: {
+    accept: 'application/vnd.github.v3+json',
+    'user-agent': 'actions/github-script octokit-core.js/5.0.1 Node.js/20.19.3 (linux; x64)'
+  },
+  mediaType: { format: '', previews: [] },
+  request: {
+    agent: Agent {
+      _events: [Object: null prototype],
+      _eventsCount: 2,
+      _maxListeners: undefined,
+      defaultPort: 443,
+      protocol: 'https:',
+      options: [Object: null prototype],
+      requests: [Object: null prototype] {},
+      sockets: [Object: null prototype] {},
+      freeSockets: [Object: null prototype] {},
+      keepAliveMsecs: 1000,
+      keepAlive: true,
+      maxSockets: Infinity,
+      maxFreeSockets: 256,
+      scheduling: 'lifo',
+      maxTotalSockets: Infinity,
+      totalSocketCount: 0,
+      maxCachedSessions: 100,
+      _sessionCache: [Object],
+      [Symbol(shapeMode)]: false,
+      [Symbol(kCapture)]: false
+    },
+    fetch: [Function: proxyFetch],
+    hook: [Function: bound bound register]
+  },
+  url: '/repos/{owner}/{repo}/issues/comments/{comment_id}',
+  owner: 'geminimir',
+  repo: 'promptproof-demo-project',
+  comment_id: 3177337831,
+  body: '## 🔍 PromptProof Evaluation\n' +
+    '\n' +
+    '✅ **All checks passed!**\n' +
+    '\n' +
+    '### Metrics\n' +
+    '\n' +
+    '| Metric | Value |\n' +
+    '|--------|-------|\n' +
+    '| Total Fixtures | 0 |\n' +
+    '| Passed | 0 |\n' +
+    '| Failed | 0 |\n' +
+    '| Total Cost | $0.0000 |\n' +
+    '| P95 Latency | 0ms |\n' +
+    '| Mode | warn |\n' +
+    '\n' +
+    '---\n' +
+    '_Generated by [PromptProof](https://github.com/geminimir/promptproof)_'
+}
+PATCH /repos/geminimir/promptproof-demo-project/issues/comments/3177337831 - 200 in 421ms
+##[debug]Node Action run completed with exit code 0
+##[debug]Set output result = 
+##[debug]Finished: run
+##[debug]Evaluating: steps.eval.outputs.violations
+##[debug]Evaluating Index:
+##[debug]..Evaluating Index:
+##[debug]....Evaluating Index:
+##[debug]......Evaluating steps:
+##[debug]......=> Object
+##[debug]......Evaluating String:
+##[debug]......=> 'eval'
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'outputs'
+##[debug]..=> Object
+##[debug]..Evaluating String:
+##[debug]..=> 'violations'
+##[debug]=> '0'
+##[debug]Result: '0'
+##[debug]Evaluating: steps.eval.outputs.passed
+##[debug]Evaluating Index:
+##[debug]..Evaluating Index:
+##[debug]....Evaluating Index:
+##[debug]......Evaluating steps:
+##[debug]......=> Object
+##[debug]......Evaluating String:
+##[debug]......=> 'eval'
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'outputs'
+##[debug]..=> Object
+##[debug]..Evaluating String:
+##[debug]..=> 'passed'
+##[debug]=> '0'
+##[debug]Result: '0'
+##[debug]Evaluating: steps.eval.outputs.failed
+##[debug]Evaluating Index:
+##[debug]..Evaluating Index:
+##[debug]....Evaluating Index:
+##[debug]......Evaluating steps:
+##[debug]......=> Object
+##[debug]......Evaluating String:
+##[debug]......=> 'eval'
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'outputs'
+##[debug]..=> Object
+##[debug]..Evaluating String:
+##[debug]..=> 'failed'
+##[debug]=> '0'
+##[debug]Result: '0'
+##[debug]Evaluating: steps.eval.outputs.report-path
+##[debug]Evaluating Index:
+##[debug]..Evaluating Index:
+##[debug]....Evaluating Index:
+##[debug]......Evaluating steps:
+##[debug]......=> Object
+##[debug]......Evaluating String:
+##[debug]......=> 'eval'
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'outputs'
+##[debug]..=> Object
+##[debug]..Evaluating String:
+##[debug]..=> 'report-path'
+##[debug]=> 'promptproof-report.html'
+##[debug]Result: 'promptproof-report.html'
+##[debug]Evaluating: steps.eval.outputs.exit-code
+##[debug]Evaluating Index:
+##[debug]..Evaluating Index:
 ##[debug]....Evaluating Index:
 ##[debug]......Evaluating steps:
 ##[debug]......=> Object
@@ -180,8 +1460,8 @@ Checking PromptProof availability
 ##[debug]..=> Object
 ##[debug]..Evaluating String:
 ##[debug]..=> 'exit-code'
-##[debug]=> '0'
-##[debug]Result: '0'
+##[debug]=> '2'
+##[debug]Result: '2'
 ##[debug]Evaluating: steps.eval.outputs.total-cost
 ##[debug]Evaluating Index:
 ##[debug]..Evaluating Index:

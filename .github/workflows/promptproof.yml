@@ -49,13 +49,10 @@ jobs:
             head -20 test-direct.json
           fi
       
-      - name: PromptProof (report-only)
-        uses: geminimir/promptproof-action@main
-        with:
-          config: promptproof.yaml
-          format: html
-          mode: report-only
-          report-artifact: promptproof-report
+      # Temporarily generate the report directly via CLI to avoid action parsing issues
+      - name: Generate PromptProof report via CLI
+        run: |
+          npx -y -p promptproof-cli@beta promptproof eval -c promptproof.yaml --format html --out promptproof-report || true
       - name: Create snapshot on success (main only)
         if: github.ref == 'refs/heads/main' && success()
         run: |
