@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: PromptProof (report-only)
-        uses: geminimir/promptproof-action@v0
+        uses: geminimir/promptproof-action@main
         with:
           config: promptproof.yaml
           format: html
@@ -29,10 +29,3 @@ jobs:
         if: github.ref == 'refs/heads/main' && success()
         run: |
           npx promptproof snapshot promptproof.yaml --promote
-      
-      - name: Upload report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: promptproof-report
-          path: promptproof-report.*
