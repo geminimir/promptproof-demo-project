@@ -1,0 +1,233 @@
+##[debug]Evaluating condition for step: 'PromptProof (report-only)'
+##[debug]Evaluating: success()
+##[debug]Evaluating success:
+##[debug]=> true
+##[debug]Result: true
+##[debug]Starting: PromptProof (report-only)
+##[debug]Register post job cleanup for action: geminimir/promptproof-action@main
+##[debug]Loading inputs
+##[debug]Loading env
+Run geminimir/promptproof-action@main
+##[debug]Evaluating condition for step: 'run'
+##[debug]Evaluating: success()
+##[debug]Evaluating success:
+##[debug]=> true
+##[debug]Result: true
+##[debug]Starting: run
+##[debug]Register post job cleanup for action: actions/setup-node@v4
+##[debug]Loading inputs
+##[debug]Evaluating: inputs.node-version
+##[debug]Evaluating Index:
+##[debug]..Evaluating inputs:
+##[debug]..=> Object
+##[debug]..Evaluating String:
+##[debug]..=> 'node-version'
+##[debug]=> '20'
+##[debug]Result: '20'
+##[debug]Evaluating: (((github.server_url == 'https://github.com') && github.token) || '')
+##[debug]Evaluating Or:
+##[debug]..Evaluating And:
+##[debug]....Evaluating Equal:
+##[debug]......Evaluating Index:
+##[debug]........Evaluating github:
+##[debug]........=> Object
+##[debug]........Evaluating String:
+##[debug]........=> 'server_url'
+##[debug]......=> 'https://github.com'
+##[debug]......Evaluating String:
+##[debug]......=> 'https://github.com'
+##[debug]....=> true
+##[debug]....Evaluating Index:
+##[debug]......Evaluating github:
+##[debug]......=> Object
+##[debug]......Evaluating String:
+##[debug]......=> 'token'
+##[debug]....=> '***'
+##[debug]..=> '***'
+##[debug]=> '***'
+##[debug]Expanded: ((('https://github.com' == 'https://github.com') && '***') || '')
+##[debug]Result: '***'
+##[debug]Loading env
+Run actions/setup-node@v4
+##[debug]isExplicit: 
+##[debug]explicit? false
+##[debug]isExplicit: 18.20.8
+##[debug]explicit? true
+##[debug]isExplicit: 20.19.4
+##[debug]explicit? true
+##[debug]isExplicit: 22.18.0
+##[debug]explicit? true
+##[debug]evaluating 3 versions
+##[debug]matched: 20.19.4
+##[debug]checking cache: /opt/hostedtoolcache/node/20.19.4/x64
+##[debug]Found tool in cache node 20.19.4 x64
+Found in cache @ /opt/hostedtoolcache/node/20.19.4/x64
+::group::Environment details
+Environment details
+##[add-matcher]/home/runner/work/_actions/actions/setup-node/v4/.github/tsc.json
+##[debug]Added matchers: 'tsc'. Problem matchers scan action output for known warning or error strings and report these inline.
+##[add-matcher]/home/runner/work/_actions/actions/setup-node/v4/.github/eslint-stylish.json
+##[debug]Added matchers: 'eslint-stylish'. Problem matchers scan action output for known warning or error strings and report these inline.
+##[add-matcher]/home/runner/work/_actions/actions/setup-node/v4/.github/eslint-compact.json
+##[debug]Added matchers: 'eslint-compact'. Problem matchers scan action output for known warning or error strings and report these inline.
+##[debug]Node Action run completed with exit code 0
+##[debug]Set output node-version = v20.19.4
+##[debug]Finished: run
+##[debug]Evaluating condition for step: 'run'
+##[debug]Evaluating: success()
+##[debug]Evaluating success:
+##[debug]=> true
+##[debug]Result: true
+##[debug]Starting: run
+##[debug]Loading inputs
+##[debug]Loading env
+Run echo "::group::Checking PromptProof availability"
+##[debug]/usr/bin/bash --noprofile --norc -e -o pipefail /home/runner/work/_temp/efe5a0c0-0fca-487a-a0c0-79b6bf1e5cd7.sh
+::group::Checking PromptProof availability
+Checking PromptProof availability
+##[debug]Finished: run
+##[debug]Evaluating condition for step: 'run'
+##[debug]Evaluating: success()
+##[debug]Evaluating success:
+##[debug]=> true
+##[debug]Result: true
+##[debug]Starting: run
+##[debug]Loading inputs
+##[debug]Evaluating: format('echo "::group::Running PromptProof evaluation"
+##[debug]
+##[debug]# Determine effective config path (may be rewritten below)
+##[debug]EFFECTIVE_CONFIG="{0}"
+##[debug]
+##[debug]# Prepare artifact base name and output path
+##[debug]ARTIFACT_NAME="{1}"
+##[debug]if [ -z "$ARTIFACT_NAME" ]; then
+##[debug]  ARTIFACT_NAME="promptproof-report"
+##[debug]fi
+##[debug]
+##[debug]# Handle baseline-ref: fetch baseline snapshot files from the given ref
+##[debug]if [ -n "{2}" ]; then
+##[debug]  echo "Fetching baseline snapshot from ref: {3}"
+##[debug]  mkdir -p .promptproof/baselines
+##[debug]  # Find all last_green.json files at the ref
+##[debug]  SUITE_FILES=$(git ls-tree -r --name-only "{4}" .promptproof/baselines 2>/dev/null | grep ''last_green.json'' || true)
+##[debug]  if [ -n "$SUITE_FILES" ]; then
+##[debug]    while read -r FILE; do
+##[debug]      [ -z "$FILE" ] && continue
+##[debug]      SUITE=$(echo "$FILE" | awk -F/ ''{{print $3}}'')
+##[debug]      mkdir -p ".promptproof/baselines/$SUITE"
+##[debug]      git show "{5}:$FILE" > ".promptproof/baselines/$SUITE/last_green.json" || true
+##[debug]      BASELINE_JSON=".promptproof/baselines/$SUITE/last_green.json"
+##[debug]      if [ -f "$BASELINE_JSON" ]; then
+##[debug]        MANIFEST_REL=$(node -e "try{{const b=require(''./$BASELINE_JSON'');console.log(b.path||'''')}}catch(e){{console.log('''')}}")
+##[debug]        TAG=$(node -e "try{{const b=require(''./$BASELINE_JSON'');console.log(b.tag||'''')}}catch(e){{console.log('''')}}")
+##[debug]        if [ -n "$MANIFEST_REL" ]; then
+##[debug]          mkdir -p ".promptproof/baselines/$SUITE/$MANIFEST_REL"
+##[debug]          git show "{6}:.promptproof/baselines/$SUITE/$MANIFEST_REL/manifest.json" > ".promptproof/baselines/$SUITE/$MANIFEST_REL/manifest.json" 2>/dev/null || true
+##[debug]        fi
+##[debug]        if [ -n "$TAG" ]; then
+##[debug]          mkdir -p ".promptproof/snapshots/$SUITE/$TAG"
+##[debug]          git show "{7}:.promptproof/snapshots/$SUITE/$TAG/manifest.json" > ".promptproof/snapshots/$SUITE/$TAG/manifest.json" 2>/dev/null || true
+##[debug]        fi
+##[debug]      fi
+##[debug]    done <<< "$SUITE_FILES"
+##[debug]  else
+##[debug]    echo "No baseline snapshots found at ref {8}" || true
+##[debug]  fi
+##[debug]fi
+##[debug]
+##[debug]# Possibly rewrite config to enforce mode and/or max-run-cost
+##[debug]NEEDS_REWRITE="0"
+##[debug]TMP_CONFIG="promptproof.effective.yaml"
+##[debug]
+##[debug]# Normalize mode synonyms and decide if we need to force mode in config
+##[debug]MODE_INPUT="{9}"
+##[debug]if [ "$MODE_INPUT" = "report-only" ]; then MODE_INPUT="warn"; fi
+##[debug]if [ "$MODE_INPUT" = "gate" ]; then MODE_INPUT="fail"; fi
+##[debug]
+##[debug]if [ -n "$MODE_INPUT" ]; then
+##[debug]  NEEDS_REWRITE="1"
+##[debug]fi
+##[debug]
+##[debug]if [ -n "{10}" ]; then
+##[debug]  NEEDS_REWRITE="1"
+##[debug]fi
+##[debug]
+##[debug]if [ "$NEEDS_REWRITE" = "1" ]; then
+##[debug]  echo "Rewriting policy config for requested overrides"
+##[debug]  # Start from original
+##[debug]  cp "{11}" "$TMP_CONFIG"
+##[debug]  # Ensure budgets block exists if we need to write cost gate
+##[debug]  if [ -n "{12}" ]; then
+##[debug]    if ! grep -Eq ''^\s*budgets:\s*$'' "$TMP_CONFIG"; then
+##[debug]      printf ''\n'' >> "$TMP_CONFIG"
+##[debug]      echo ''budgets:'' >> "$TMP_CONFIG"
+##[debug]    fi
+##[debug]    # If the key exists, replace it; otherwise, insert under budgets:
+##[debug]    if grep -Eq ''^\s*cost_usd_total_max:\s*'' "$TMP_CONFIG"; then
+##[debug]      sed -i.bak -E "s/^\s*cost_usd_total_max:\s*.*/  cost_usd_total_max: {13}/" "$TMP_CONFIG"
+##[debug]    else
+##[debug]      awk -v val="{14}" ''BEGIN{{added=0}} {{print $0; if ($0 ~ /^budgets:\s*$/ && added==0){{print "  cost_usd_total_max: " val; added=1}}}}'' "$TMP_CONFIG" > "$TMP_CONFIG.tmp" && mv "$TMP_CONFIG.tmp" "$TMP_CONFIG"
+##[debug]    fi
+##[debug]  fi
+##[debug]....Evaluating Index:
+##[debug]......Evaluating steps:
+##[debug]......=> Object
+##[debug]......Evaluating String:
+##[debug]......=> 'eval'
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'outputs'
+##[debug]..=> Object
+##[debug]..Evaluating String:
+##[debug]..=> 'exit-code'
+##[debug]=> '0'
+##[debug]Result: '0'
+##[debug]Evaluating: steps.eval.outputs.total-cost
+##[debug]Evaluating Index:
+##[debug]..Evaluating Index:
+##[debug]....Evaluating Index:
+##[debug]......Evaluating steps:
+##[debug]......=> Object
+##[debug]......Evaluating String:
+##[debug]......=> 'eval'
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'outputs'
+##[debug]..=> Object
+##[debug]..Evaluating String:
+##[debug]..=> 'total-cost'
+##[debug]=> '0.0000'
+##[debug]Result: '0.0000'
+##[debug]Evaluating: steps.eval.outputs.failed-tests
+##[debug]Evaluating Index:
+##[debug]..Evaluating Index:
+##[debug]....Evaluating Index:
+##[debug]......Evaluating steps:
+##[debug]......=> Object
+##[debug]......Evaluating String:
+##[debug]......=> 'eval'
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'outputs'
+##[debug]..=> Object
+##[debug]..Evaluating String:
+##[debug]..=> 'failed-tests'
+##[debug]=> '0'
+##[debug]Result: '0'
+##[debug]Evaluating: steps.eval.outputs.regressions
+##[debug]Evaluating Index:
+##[debug]..Evaluating Index:
+##[debug]....Evaluating Index:
+##[debug]......Evaluating steps:
+##[debug]......=> Object
+##[debug]......Evaluating String:
+##[debug]......=> 'eval'
+##[debug]....=> Object
+##[debug]....Evaluating String:
+##[debug]....=> 'outputs'
+##[debug]..=> Object
+##[debug]..Evaluating String:
+##[debug]..=> 'regressions'
+##[debug]=> '0'
+##[debug]Result: '0'
+##[debug]Finishing: PromptProof (report-only)

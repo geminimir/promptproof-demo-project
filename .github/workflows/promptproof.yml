@@ -18,6 +18,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Debug - Check files
+        run: |
+          echo "=== Current directory ==="
+          pwd
+          echo "=== List files in root ==="
+          ls -la
+          echo "=== Check if promptproof.yaml exists ==="
+          test -f promptproof.yaml && echo "✓ promptproof.yaml exists" || echo "✗ promptproof.yaml NOT found"
+          echo "=== Check fixtures directory ==="
+          ls -la fixtures/ || echo "fixtures directory not found"
+          echo "=== Check specific fixture file ==="
+          test -f fixtures/support-replies/outputs.jsonl && echo "✓ fixtures/support-replies/outputs.jsonl exists" || echo "✗ fixture file NOT found"
+          echo "=== Show promptproof.yaml content (first 5 lines) ==="
+          head -5 promptproof.yaml || echo "Could not read promptproof.yaml"
+          echo "=== Count lines in fixture file ==="
+          wc -l fixtures/support-replies/outputs.jsonl || echo "Could not count fixture lines"
+      
+      - name: Test CLI directly
+        run: |
+          echo "=== Testing PromptProof CLI directly ==="
+          npx -y -p promptproof-cli@beta promptproof --version || echo "Failed to get version"
+          echo "=== Running eval with CLI directly ==="
+          npx -y -p promptproof-cli@beta promptproof eval -c promptproof.yaml --format json --out test-direct 2>&1 || echo "CLI eval failed"
+          echo "=== Check if report was created ==="
+          ls -la test-direct.* || echo "No test-direct report files found"
+          if [ -f test-direct.json ]; then
+            echo "=== JSON report content (first 20 lines) ==="
+            head -20 test-direct.json
+          fi
+      
       - name: PromptProof (report-only)
         uses: geminimir/promptproof-action@main
         with:
