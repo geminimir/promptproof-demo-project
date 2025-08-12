@@ -12,6 +12,12 @@ A demonstration application showcasing PromptProof's capabilities to catch commo
 - **Tool Calling**: Calendar event scheduling with argument validation
 - **Multi-language Support**: English and French locales
 
+## See it in action
+
+- Regression fail PR · Cost gate PR · Assertion fail PR
+  
+  [Links to live PRs and GIFs to be inserted after publishing]
+
 ## Setup
 
 1. Install dependencies (includes PromptProof SDK and CLI):
@@ -46,7 +52,7 @@ This demo showcases the complete PromptProof workflow using the official npm pac
 - **New**: `--regress`, `--seed`, `--runs` flags; `snapshot` command for baselines
 
 ### **GitHub Action** ✅
-Add `.github/workflows/promptproof.yml`:
+Already included as `.github/workflows/promptproof.yml` (fixtures-only, no secrets). It runs in `report-only` so forks stay green, and can be made required via branch rules.
 ```yaml
 name: PromptProof (demo)
 on: [pull_request]
@@ -62,7 +68,7 @@ jobs:
         with:
           config: promptproof.yaml
           format: html
-          mode: warn
+          mode: report-only
       - name: Create snapshot on success
         if: github.ref == 'refs/heads/main' && success()
         run: |
@@ -136,8 +142,12 @@ This demo proves PromptProof's effectiveness by showcasing:
 7. **Multilingual Regressions**: Inconsistent behavior across locales
 
 ### **Red → Green Demonstrations**
-- **Red**: Fixtures with intentional failures → CLI detects violations
-- **Green**: Fix prompts → CLI passes → Production safety proven
+- **Red**: Fixtures with intentional failures → Action goes red with HTML report
+- **Green**: Quick fix → re-run → green check
+
+## One-click template
+
+This repository is designed to be a template. Enable "Template repository" in Settings, then click "Use this template" to spin up a new project with PromptProof pre-wired. The default workflow uses fixtures-only and report-only so your first PR is green without any secrets.
 
 ### **Production-Ready Integration**
 - **Zero network calls in CI**: Tests run on recorded fixtures

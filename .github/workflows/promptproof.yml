@@ -1,5 +1,9 @@
 name: PromptProof (demo)
-on: [pull_request]
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
 
 permissions:
   contents: read
@@ -14,12 +18,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: geminimir/promptproof-action@v0
+      - name: PromptProof (report-only)
+        uses: geminimir/promptproof-action@v0
         with:
           config: promptproof.yaml
           format: html
-          mode: warn
-      - name: Create snapshot on success
+          mode: report-only
+          report-artifact: promptproof-report
+      - name: Create snapshot on success (main only)
         if: github.ref == 'refs/heads/main' && success()
         run: |
           npx promptproof snapshot promptproof.yaml --promote
