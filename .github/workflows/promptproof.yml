@@ -21,9 +21,11 @@ jobs:
       - name: PromptProof (report-only)
         uses: geminimir/promptproof-action@main
         with:
+          baseline-ref: origin/main
+          regress: true
           config: promptproof.yaml
           format: html
-          mode: report-only
+          mode: gate
           report-artifact: promptproof-report
       - name: Create snapshot on success (main only)
         if: github.ref == 'refs/heads/main' && success()
