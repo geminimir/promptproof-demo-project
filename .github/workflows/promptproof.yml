@@ -19,16 +19,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: PromptProof (report-only)
-        uses: geminimir/promptproof-action@main
+        uses: ./promptproof-action
         with:
-          config: promptproof.yaml
+          config: promptproof-demo-project/promptproof.yaml
           format: html
           mode: report-only
           report-artifact: promptproof-report
       - name: Create snapshot on success (main only)
         if: github.ref == 'refs/heads/main' && success()
         run: |
-          npx promptproof snapshot promptproof.yaml --promote
+          npx promptproof snapshot promptproof-demo-project/promptproof.yaml --promote
       
       - name: Upload report
         if: always()

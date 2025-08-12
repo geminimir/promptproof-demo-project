@@ -1,0 +1,175 @@
+{
+  "total": 12,
+  "passed": 0,
+  "failed": 12,
+  "violations": [
+    {
+      "id": "no_pii-sup-0001-[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}",
+      "checkId": "no_pii",
+      "recordId": "sup-0001",
+      "message": "Forbidden pattern found: [A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,} (matched: \"jane.doe@example.com\")",
+      "path": "text",
+      "severity": "error"
+    },
+    {
+      "id": "disclaimer_fr-sup-0001-Nous ne pouvons pas partager des coordonnées personnelles\\.",
+      "checkId": "disclaimer_fr",
+      "recordId": "sup-0001",
+      "message": "Required pattern not found: Nous ne pouvons pas partager des coordonnées personnelles\\.",
+      "path": "text",
+      "severity": "error"
+    },
+    {
+      "id": "schema-sup-0002-/status",
+      "checkId": "schema",
+      "recordId": "sup-0002",
+      "message": "Schema validation failed: must be equal to one of the allowed values",
+      "path": "/status",
+      "severity": "error"
+    },
+    {
+      "id": "schema-sup-0002-/confidence",
+      "checkId": "schema",
+      "recordId": "sup-0002",
+      "message": "Schema validation failed: must be <= 1",
+      "path": "/confidence",
+      "severity": "error"
+    },
+    {
+      "id": "disclaimer_fr-sup-0002-Nous ne pouvons pas partager des coordonnées personnelles\\.",
+      "checkId": "disclaimer_fr",
+      "recordId": "sup-0002",
+      "message": "Required pattern not found: Nous ne pouvons pas partager des coordonnées personnelles\\.",
+      "path": "text",
+      "severity": "error"
+    },
+    {
+      "id": "disclaimer_en-sup-0003-We cannot share personal contact information\\.",
+      "checkId": "disclaimer_en",
+      "recordId": "sup-0003",
+      "message": "Required pattern not found: We cannot share personal contact information\\.",
+      "path": "text",
+      "severity": "error"
+    },
+    {
+      "id": "disclaimer_fr-sup-0004-Nous ne pouvons pas partager des coordonnées personnelles\\.",
+      "checkId": "disclaimer_fr",
+      "recordId": "sup-0004",
+      "message": "Required pattern not found: Nous ne pouvons pas partager des coordonnées personnelles\\.",
+      "path": "text",
+      "severity": "error"
+    },
+    {
+      "id": "disclaimer_en-sup-0005-We cannot share personal contact information\\.",
+      "checkId": "disclaimer_en",
+      "recordId": "sup-0005",
+      "message": "Required pattern not found: We cannot share personal contact information\\.",
+      "path": "text",
+      "severity": "error"
+    },
+    {
+      "id": "disclaimer_fr-sup-0005-Nous ne pouvons pas partager des coordonnées personnelles\\.",
+      "checkId": "disclaimer_fr",
+      "recordId": "sup-0005",
+      "message": "Required pattern not found: Nous ne pouvons pas partager des coordonnées personnelles\\.",
+      "path": "text",
+      "severity": "error"
+    },
+    {
+      "id": "disclaimer_fr-support-replies-1754847684523-Nous ne pouvons pas partager des coordonnées personnelles\\.",
+      "checkId": "disclaimer_fr",
+      "recordId": "support-replies-1754847684523",
+      "message": "Required pattern not found: Nous ne pouvons pas partager des coordonnées personnelles\\.",
+      "path": "text",
+      "severity": "error"
+    },
+    {
+      "id": "disclaimer_en-support-replies-1754847720774-We cannot share personal contact information\\.",
+      "checkId": "disclaimer_en",
+      "recordId": "support-replies-1754847720774",
+      "message": "Required pattern not found: We cannot share personal contact information\\.",
+      "path": "text",
+      "severity": "error"
+    },
+    {
+      "id": "disclaimer_fr-support-replies-1754847768541-Nous ne pouvons pas partager des coordonnées personnelles\\.",
+      "checkId": "disclaimer_fr",
+      "recordId": "support-replies-1754847768541",
+      "message": "Required pattern not found: Nous ne pouvons pas partager des coordonnées personnelles\\.",
+      "path": "text",
+      "severity": "error"
+    },
+    {
+      "id": "disclaimer_en-support-replies-1754847772995-We cannot share personal contact information\\.",
+      "checkId": "disclaimer_en",
+      "recordId": "support-replies-1754847772995",
+      "message": "Required pattern not found: We cannot share personal contact information\\.",
+      "path": "text",
+      "severity": "error"
+    },
+    {
+      "id": "disclaimer_fr-1541b75ada8bcdfb-Nous ne pouvons pas partager des coordonnées personnelles\\.",
+      "checkId": "disclaimer_fr",
+      "recordId": "1541b75ada8bcdfb",
+      "message": "Required pattern not found: Nous ne pouvons pas partager des coordonnées personnelles\\.",
+      "path": "text",
+      "severity": "error"
+    },
+    {
+      "id": "disclaimer_en-fbd3aedc4c5c7765-We cannot share personal contact information\\.",
+      "checkId": "disclaimer_en",
+      "recordId": "fbd3aedc4c5c7765",
+      "message": "Required pattern not found: We cannot share personal contact information\\.",
+      "path": "text",
+      "severity": "error"
+    },
+    {
+      "id": "disclaimer_fr-fbd3aedc4c5c7765-Nous ne pouvons pas partager des coordonnées personnelles\\.",
+      "checkId": "disclaimer_fr",
+      "recordId": "fbd3aedc4c5c7765",
+      "message": "Required pattern not found: Nous ne pouvons pas partager des coordonnées personnelles\\.",
+      "path": "text",
+      "severity": "error"
+    },
+    {
+      "id": "disclaimer_en-6f469bb79996cea5-We cannot share personal contact information\\.",
+      "checkId": "disclaimer_en",
+      "recordId": "6f469bb79996cea5",
+      "message": "Required pattern not found: We cannot share personal contact information\\.",
+      "path": "text",
+      "severity": "error"
+    },
+    {
+      "id": "disclaimer_fr-6f469bb79996cea5-Nous ne pouvons pas partager des coordonnées personnelles\\.",
+      "checkId": "disclaimer_fr",
+      "recordId": "6f469bb79996cea5",
+      "message": "Required pattern not found: Nous ne pouvons pas partager des coordonnées personnelles\\.",
+      "path": "text",
+      "severity": "error"
+    },
+    {
+      "id": "budget-latency-p95",
+      "checkId": "budget",
+      "recordId": "aggregate",
+      "message": "P95 latency 7962ms exceeds budget 1800ms",
+      "severity": "error"
+    }
+  ],
+  "budgets": {
+    "cost_usd_total": 0.12136,
+    "cost_usd_per_run_max": 0.042749999999999996,
+    "latency_ms_p95": 7962,
+    "latency_ms_p99": 7962,
+    "violations": [
+      {
+        "id": "budget-latency-p95",
+        "checkId": "budget",
+        "recordId": "aggregate",
+        "message": "P95 latency 7962ms exceeds budget 1800ms",
+        "severity": "error"
+      }
+    ]
+  },
+  "mode": "warn",
+  "exitCode": 0
+}
