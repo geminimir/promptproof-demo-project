@@ -23,16 +23,9 @@ jobs:
         with:
           config: promptproof.yaml
           format: html
-          mode: report-only
+          mode: gate
           report-artifact: promptproof-report
       - name: Create snapshot on success (main only)
         if: github.ref == 'refs/heads/main' && success()
         run: |
           npx promptproof snapshot promptproof.yaml --promote
-      
-      - name: Upload report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: promptproof-report
-          path: promptproof-report.*
