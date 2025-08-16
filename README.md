@@ -5,6 +5,8 @@ A demonstration application showcasing PromptProof's capabilities to catch commo
 [![CI](https://img.shields.io/github/actions/workflow/status/geminimir/promptproof-demo-project/promptproof.yml?branch=main)](https://github.com/geminimir/promptproof-demo-project/actions)
 [![Action](https://img.shields.io/badge/Marketplace-promptproof--action-blue?logo=github)](https://github.com/marketplace/actions/promptproof-eval)
 
+> Website: https://promptproof.io
+
 ## Features
 
 - **Support Reply Endpoint**: Generates support responses with required disclaimers and PII protection
